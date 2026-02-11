@@ -17,7 +17,7 @@ export default function World() {
   const { pathname } = useLocation();
   const oneCallApi = useRef(true);
   const { data, loading, error, refetch } = useFetch(
-    "http://localhost:3000/Articles", {},
+    "https://bbcnews21.onrender.com/Articles", {},
   );
 
   useEffect(() => {
