@@ -2,11 +2,11 @@ import Logo from "./logo";
 import WeatherBar from "./WeatherBer";
 import AuthButtons from "./AuthButtons";
 import UserSection from "./UserSection";
-import MobileSearch from "./mobileSearch";
+// import MobileSearch from "./mobileSearch";
 import ToggleMobileMenu from "./toggle/ToggleMobileMenu";
 import ToggleMobileSearch from "./toggle/ToggleMobileSearch";
 import Search from "./Search";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Navigation from "./Navigation";
 import { useAuth } from "./../context/AuthContext";
 import MobileMenu from "./MobileMenu";
@@ -63,7 +63,7 @@ export default function Header() {
           </div>
         </div>
 
-        <MobileSearch show={showmMobileSesrch ? "show" : "hidden"} />
+        {/* <MobileSearch show={showmMobileSesrch ? "show" : "hidden"} /> */}
       </div>
 
       <Navigation
