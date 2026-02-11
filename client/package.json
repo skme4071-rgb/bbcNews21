@@ -5,10 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && xcopy /E /I /Y dist ..\\server\\client",
+    "build": "vite build && cp -r dist ../server/client",
     "lint": "eslint .",
     "preview": "vite preview"
-    
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
