@@ -28,7 +28,7 @@ export default function Register() {
   });
 
   const { data, error, loading, refetch } = useFetch(
-    "http://localhost:3000/Auth/user/register",
+    "https://bbcnews21.onrender.com/Auth/user/register",
     {}
   );
 

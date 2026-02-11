@@ -8,7 +8,7 @@ export default function IsLoginCheck({ children }) {
     const [loading, setLoading] = useState(true); // ✅ FIXED
 
     const { refetch } = useFetch(
-        "http://localhost:3000/Auth/User/isLogin"
+        "https://bbcnews21.onrender.com/Auth/User/isLogin"
     );
 
     const called = useRef(false);

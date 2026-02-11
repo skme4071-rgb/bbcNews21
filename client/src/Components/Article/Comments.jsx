@@ -13,7 +13,7 @@ function CommentFuntion({ prodactId }) {
   const ranOnce = useRef(false);
   // useFetch hook for GET and POST
   const { data, refetch, error, loading } = useFetch(
-    "http://localhost:3000/comments",
+    "https://bbcnews21.onrender.com/comments",
     { auto: false }
   );
 

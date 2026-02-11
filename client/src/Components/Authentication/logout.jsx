@@ -12,7 +12,7 @@ export default function Logout() {
 
 
     const { data, refetch, error, loading } = useFetch(
-        "http://localhost:3000/Auth/user/logout", { auto: false }
+        "https://bbcnews21.onrender.com/Auth/user/logout", { auto: false }
     );
 
     const ClickHandle = (e) => {

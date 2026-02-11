@@ -23,7 +23,7 @@ export default function Signin() {
   });
 
   const { data, error, loading, refetch } = useFetch(
-    "http://localhost:3000/User/forgot", { auto: false }
+    "https://bbcnews21.onrender.com/User/forgot", { auto: false }
   );
 
   // 🔹 Submit handler
