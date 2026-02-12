@@ -2,7 +2,7 @@ import Logo from "./logo";
 import WeatherBar from "./WeatherBer";
 import AuthButtons from "./AuthButtons";
 import UserSection from "./UserSection";
-import MobileSearch from "./mobileSearch";
+import MobileSearch from "./MobileSearch";
 
 import Search from "./Search";
 import { useState } from "react";
