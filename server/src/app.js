@@ -41,7 +41,12 @@ const server = http.createServer(app);
 // Middleware
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://localhost:5173" , "https://bbcnews21.onrender.com"],
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "https://bbcnews21.onrender.com"
+      
+    ],
     credentials: true,
   }),
 );
@@ -51,11 +56,8 @@ app.use(cookieParser());
 
 // Media uploads
 app.use("/upload", express.static(path.join(__dirname, "../upload")));
+app.use(express.static(path.join(__dirname, "../../client/dist")));
 
-
-// React build
-const clientDist = path.join(__dirname, "../client");
-app.use(express.static(clientDist));
 
 // ES Modules __dirname fix
 app.use((req, res, next) => {
@@ -87,7 +89,7 @@ app.get("/headline", (req, res) => {
 
 // ✅ React SPA fallback LAST
 app.get(/.*/, (req, res) => {
-  res.sendFile(path.join(clientDist, "index.html"));
+  res.sendFile(path.join(__dirname, "../../client/dist/index.html"));
 });
 
 socket(server);

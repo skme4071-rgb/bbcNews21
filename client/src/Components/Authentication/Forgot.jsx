@@ -3,11 +3,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import Form from "./Form";
-import useFetch from "../../hooks/useFetch";
+import { useFetch } from "./../../hooks/CommonHooks";
 import { CustomError, Input, CustomLink, CustomNotification } from "../utlis/tag";
 import { signinSchema } from "./validation";
 import { ContextFocusBox } from "../../context/FocusBoxContext";
 import { UseAuth } from "../../context/AuthContext";
+import { API_URL } from "./../../congig";
 
 export default function Signin() {
   const { closeFocusBox } = ContextFocusBox();
@@ -23,7 +24,7 @@ export default function Signin() {
   });
 
   const { data, error, loading, refetch } = useFetch(
-    "https://bbcnews21.onrender.com/User/forgot", { auto: false }
+    `${API_URL}/User/forgot`,
   );
 
   // 🔹 Submit handler
@@ -63,7 +64,7 @@ export default function Signin() {
       <Input {...formSignin("email")} type="email" placeholder="Email" />
       {getErrorMsg("email") && <CustomError text={getErrorMsg("email")} />}
 
-      
+
 
 
       {/* Submit Button */}

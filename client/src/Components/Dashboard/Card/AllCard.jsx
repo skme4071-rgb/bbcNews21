@@ -3,7 +3,6 @@ import { Icons } from "./../Config";
 
 import {
     TextareaAutoResize,
-
     Select,
     CRUDbutton,
 
@@ -61,9 +60,10 @@ import {
     CustomButton,
 } from "./../../../utilities/Element";
 
+import {API_URL  } from "./../../../congig";
 
 // Toolbar Component
-export const Toolbar = ({ index, handlePrev, handleNext, uploadMedia }) => {
+export const Toolbar = ({ index, handlePrev, handleNext }) => {
     return (
         <div className="flex items-center space-x-2 py-3 border-b bg-white">
             {/* Navigation */}
@@ -102,7 +102,7 @@ export const Toolbar = ({ index, handlePrev, handleNext, uploadMedia }) => {
                     accept="image"
 
                     fetch={{
-                        url: "http://localhost:3000/Media/",
+                        url: `${API_URL}/Media/`,
                         method: "POST",
                     }}
                     style="w-5 h-5 p-4  rounded"
@@ -114,7 +114,7 @@ export const Toolbar = ({ index, handlePrev, handleNext, uploadMedia }) => {
                     accept="video"
 
                     fetch={{
-                        url: "http://localhost:3000/Media/",
+                        url: `${API_URL}/Media/`,
                         method: "POST",
                     }}
                     style="w-5 h-5 p-4  rounded"

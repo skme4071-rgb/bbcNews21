@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useFetch } from "../../../hooks/CommonHooks";
 import { Source } from "./../Card/Source";
+import { API_URL } from "./../../../congig";
 
 import {
     SEO,
@@ -43,11 +44,10 @@ export const EMPTY_ARTICLE = {
 };
 
 
-// https://698b4f8990512f57cbb3a692--bbc-news-24.netlify.app
 
 
 export default function Editor() {
-    const { res, refetch } = useFetch("http://localhost:3000/Articles");
+    const { res, refetch } = useFetch(`${API_URL}/Articles`);
 
 
 

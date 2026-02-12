@@ -2,15 +2,15 @@ import Logo from "./logo";
 import WeatherBar from "./WeatherBer";
 import AuthButtons from "./AuthButtons";
 import UserSection from "./UserSection";
-// import MobileSearch from "./mobileSearch";
-import ToggleMobileMenu from "./toggle/ToggleMobileMenu";
-import ToggleMobileSearch from "./toggle/ToggleMobileSearch";
+import MobileSearch from "./mobileSearch";
+
 import Search from "./Search";
 import { useState } from "react";
 import Navigation from "./Navigation";
 import { useAuth } from "./../context/AuthContext";
 import MobileMenu from "./MobileMenu";
 
+import { FaBars, FaSearch } from "react-icons/fa"
 
 const pagesName1 = [
   "Home",
@@ -46,24 +46,32 @@ export default function Header() {
           <div className="flex items-center space-x-3">
             <Search />
 
-            <ToggleMobileSearch
+            <button
+              className="sm:hidden p-2 hover:bg-gray-800 rounded-lg transition-colors"
               onClick={() =>
                 setShowmMobileSesrch((prev) => {
                   return !prev;
                 })
               }
-            />
-            <ToggleMobileMenu
+            >
+              <FaSearch />
+            </button>
+
+
+            <button
               onClick={() =>
                 setShowmMobileMenu((prev) => {
                   return !prev;
-                })
-              }
-            />
+                })}
+              className="md:hidden p-2 hover:bg-gray-800 rounded-lg transition-colors"
+            >
+              <FaBars />
+            </button>
+
           </div>
         </div>
 
-        {/* <MobileSearch show={showmMobileSesrch ? "show" : "hidden"} /> */}
+        <MobileSearch show={showmMobileSesrch ? "show" : "hidden"} />
       </div>
 
       <Navigation

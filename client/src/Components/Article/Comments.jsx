@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { ContextFocusBox } from "./../../context/FocusBoxContext";
-import useFetch from "./../../hooks/useFetch";
+import { useFetch } from "./../../hooks/CommonHooks";
 import Signin from "./../Authentication/Signin";
 import { useAuth } from "./../../context/AuthContext";
 
+import { API_URL } from "./../../congig";
+
 function CommentFuntion({ prodactId }) {
-  const {  user } = useAuth();
+  const { user } = useAuth();
   const { closeFocusBox, setFocusBox } = ContextFocusBox();
 
   const [comment, setComment] = useState("");
@@ -13,8 +15,7 @@ function CommentFuntion({ prodactId }) {
   const ranOnce = useRef(false);
   // useFetch hook for GET and POST
   const { data, refetch, error, loading } = useFetch(
-    "https://bbcnews21.onrender.com/comments",
-    { auto: false }
+    `${API_URL}/comments`
   );
 
 
@@ -149,15 +150,15 @@ export function Likes({ prodactId, isLikes, totalLikes }) {
 
   const [state, setState] = useState({ isLikes, totalLikes });
 
-  const { refetch , loading} = useFetch(
-      "http://localhost:3000/Likes",
-      { auto: false }
-    );
-    
-    async function likesFuntion() {
-    
+  const { refetch, loading } = useFetch(
+    "http://localhost:3000/Likes",
+    { auto: false }
+  );
 
- try {
+  async function likesFuntion() {
+
+
+    try {
       const response = await refetch({
         method: "PUT",
         params: {
@@ -168,13 +169,13 @@ export function Likes({ prodactId, isLikes, totalLikes }) {
 
       if (!response?.success) return;
 
-      
+
       // 🔥 force state change
       setState({
         isLikes: response.likes,
         totalLikes: response.totalLikes
       });
-      
+
 
     } catch (err) {
       console.error("Like error:", err);
@@ -186,12 +187,12 @@ export function Likes({ prodactId, isLikes, totalLikes }) {
 
 
 
-   
+
   }
 
   return (
     <button
-    disabled={loading}
+      disabled={loading}
       onClick={likesFuntion}
       className={`flex items-center text-[12px] cursor-pointer ${state.isLikes ? "text-blue-600 font-semibold" : ""
         }`}
@@ -229,27 +230,3 @@ export function Share({ prodactId, userId, length }) {
   )
 }
 
-
-// async function likesFuntion() {
-//     try {
-//       const response = await refetch({
-//         method: "PUT",
-//         params: {
-//           likes: !state.isLikes,
-//           prodactId,
-//         }
-//       });
-
-//       if (!response?.success) return;
-
-      
-//       // 🔥 force state change
-//       setState({
-//         isLikes: response.likes,
-//         length: response.length
-//       });
-
-//     } catch (err) {
-//       console.error("Like error:", err);
-//     }
-//   }

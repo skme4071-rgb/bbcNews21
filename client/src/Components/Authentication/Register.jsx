@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import Form from "./Form";
-import useFetch from "./../../hooks/useFetch";
+import {useFetch }from "./../../hooks/CommonHooks";
 import {
   CustomLink,
   CustomError,
@@ -13,6 +13,7 @@ import {
 import { registerSchema } from "./validation";
 import { ContextFocusBox } from "./../../context/FocusBoxContext";
 import Signin from "./Signin";
+import { API_URL } from "./../../congig";
 
 export default function Register() {
   const { setFocusBox } = ContextFocusBox();
@@ -27,9 +28,8 @@ export default function Register() {
     resolver: zodResolver(registerSchema),
   });
 
-  const { data, error, loading, refetch } = useFetch(
-    "https://bbcnews21.onrender.com/Auth/user/register",
-    {}
+  const { res, error, loading, refetch } = useFetch(
+    `${API_URL}/Auth/user/register`
   );
 
   const onSubmit = async (formData) => {
@@ -47,12 +47,12 @@ export default function Register() {
 
   // Handle server response
   useEffect(() => {
-    if (data?.success) {
+    if (res?.success) {
       setFocusBox(<Signin />);
-    } else if (data?.errors) {
-      setResError(data.errors);
+    } else if (res?.errors) {
+      setResError(res.errors);
     }
-  }, [data, setFocusBox]);
+  }, [res, setFocusBox]);
 
   // Map first available error (Zod + server) to oneError
   useEffect(() => {

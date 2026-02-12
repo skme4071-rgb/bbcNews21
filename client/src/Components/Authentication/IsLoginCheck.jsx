@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useFetch } from "../../hooks/CommonHooks";
 import { CustomLoading } from "./../../utilities/Element";
+import { API_URL } from "./../../congig";
 
 export default function IsLoginCheck({ children }) {
     const { isLogin } = useAuth();
     const [loading, setLoading] = useState(true); // ✅ FIXED
 
     const { refetch } = useFetch(
-        "https://bbcnews21.onrender.com/Auth/User/isLogin"
+        `${API_URL}/Auth/User/isLogin`
     );
 
     const called = useRef(false);

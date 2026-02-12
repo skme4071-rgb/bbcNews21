@@ -5,11 +5,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import Form from "./Form";
-import useFetch from "../../hooks/useFetch";
+import{ useFetch }from "../../hooks/CommonHooks";
 import { CustomError, Input, CustomLink, CustomNotification } from "./../utlis/tag";
 import { signinSchema } from "./validation";
 import { ContextFocusBox } from "../../context/FocusBoxContext";
 import { useAuth } from "../../context/AuthContext";
+import {  API_URL} from "./../../congig";
 
 export default function Signin() {
     const { closeFocusBox } = ContextFocusBox();
@@ -25,9 +26,8 @@ export default function Signin() {
         resolver: zodResolver(signinSchema),
     });
 
-    const { data, error, loading, refetch } = useFetch(
-        `https://bbcnews21.onrender.com/Auth/user/login`,
-        { auto: false }
+    const { res, error, loading, refetch } = useFetch(
+        `${API_URL}/Auth/user/login`
     );
 
     // ✅ Close focus box if user is already logged in
@@ -47,13 +47,13 @@ export default function Signin() {
 
     // 🔹 Update errors & login
     useEffect(() => {
-        if (data?.success) {
-            login(data.user);
+        if (res?.success) {
+            login(res.user);
             closeFocusBox();
-        } else if (data?.errors) {
-            setResError(data.errors);
+        } else if (res?.errors) {
+            setResError(res.errors);
         }
-    }, [data, login, closeFocusBox]);
+    }, [res, login, closeFocusBox]);
 
     // 🔹 Map first available error to oneError (frontend + backend)
     useEffect(() => {

@@ -1,18 +1,21 @@
 import { useEffect } from "react";
 
 
-import useFetch from "./../../hooks/useFetch";
+import {useFetch} from "./../../hooks/CommonHooks";
 import { CustomNotification } from "./../utlis/tag";
 import { useAuth } from "./../../context/AuthContext";
 import { ContextFocusBox } from "./../../context/FocusBoxContext";
 import Signin from "./Signin";
+import { API_URL } from "./../../congig";
+
+
 export default function Logout() {
     const { setFocusBox } = ContextFocusBox()
     const { logout } = useAuth();
 
 
-    const { data, refetch, error, loading } = useFetch(
-        "https://bbcnews21.onrender.com/Auth/user/logout", { auto: false }
+    const { res, refetch, error, loading } = useFetch(
+        `${API_URL}/Auth/user/logout`
     );
 
     const ClickHandle = (e) => {
@@ -21,11 +24,11 @@ export default function Logout() {
     };
 
     useEffect(() => {
-        if (data?.success && !data?.isLogin) {
+        if (res?.success && !res?.isLogin) {
             logout();
             setFocusBox(<Signin />)
         }
-    }, [data]);
+    }, [res]);
 
     return (
         <div className="border-t border-gray-100 py-2">

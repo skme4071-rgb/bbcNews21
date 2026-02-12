@@ -1,5 +1,6 @@
 
-import { useFetch } from "./../../hooks/CommonHooks";
+
+import {useFetch} from "./../../hooks/CommonHooks";
 import { useLocation } from "react-router-dom";
 import { useRef, useEffect } from "react";
 
@@ -13,12 +14,13 @@ import {
   MostRead,
   Weather,
 } from "./../Article/allArticleCord";
+import { API_URL } from "./../../congig";
 
 export default function Health() {
   const { pathname } = useLocation();
   const oneCallApi = useRef(true);
-  const { data, loading, error, refetch } = useFetch(
-    "https://bbcnews21.onrender.com/Articles",
+  const { res, loading, error, refetch } = useFetch(
+    `${API_URL}/Articles`, 
   );
 
   useEffect(() => {
@@ -40,13 +42,13 @@ export default function Health() {
     return <CustomNotification type="error" message={error} />;
   }
 
-  if (!data || data.status !== "ok") {
+  if (!res || res.status !== "ok") {
     return (
       <CustomNotification type="warning" message="Failed to load news data." />
     );
   }
 
-  const articles = data.articles || [];
+  const articles = res.articles || [];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">

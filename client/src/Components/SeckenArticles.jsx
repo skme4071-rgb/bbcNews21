@@ -3,7 +3,7 @@ import { CustomLink } from "./utlis/tag";
 
 export default function SeckenArticles({ datas = [] }) {
 
-  console.log(datas);
+
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mobile-story-grid">
