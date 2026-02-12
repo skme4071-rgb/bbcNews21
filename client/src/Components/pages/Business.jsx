@@ -18,7 +18,7 @@ export default function Business() {
   const { pathname } = useLocation();
   const oneCallApi = useRef(true);
   const { data, loading, error, refetch } = useFetch(
-    "https://bbcnews21.onrender.com//Articles", {},
+    "https://bbcnews21.onrender.com/Articles", {},
   );
 
   useEffect(() => {
