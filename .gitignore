@@ -6,7 +6,8 @@ coverage/
 node_modules/
 client/node_modules/
 client/dist/
-server/client/
+
 .env
 *.log
-client
+
+upload
