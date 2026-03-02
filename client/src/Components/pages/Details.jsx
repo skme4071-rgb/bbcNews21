@@ -1,12 +1,11 @@
 import { useLocation } from 'react-router-dom';
 
 import { DetailsLeyout } from "../Leyout";
-import { DetailsArticle, LocalWeather, PoliticsCord } from "./../Article/allArticleCord";
-import { Slice } from "./../utlis/coommonFuntion";
+import { DetailsArticleCord, LocalWeatherCord, PoliticsCord, WeatherCord } from "./../Article/allArticleCord";
+import { CustomArraySlice } from "./../../utilities/CommonFuntion.js";
 
 
 
-import SekendaryArticle from "./../SekendaryArticle";
 
 const dd = [
   {
@@ -28,25 +27,20 @@ const oo = [
 ]
 
 export default function Details() {
-  const location = useLocation();
-  const data = location.state
-  const { title = "", source: { category } } = data
+  const data = useLocation().state
+  const { title, category } = data
 
 
   return (
-    <DetailsLeyout
-      pagesName={`${category} Newse`}
-      pagesTitle={title}
-    >
+    <DetailsLeyout {...{ title, category }}>
 
       <div className="lg:col-span-2 space-y-8">
-        <DetailsArticle data={data} />
-        {/* <SekendaryArticle datas={["", ""]} /> */}
+        <DetailsArticleCord data={data} />
       </div>
 
       <div className="space-y-6">
-        <PoliticsCord icon="🏛️" name="Politics" datas={Slice(dd, 2)} />
-        <LocalWeather name="Local Weather" icon="🌤️" WeatherData={Slice(oo, 5)} />
+        <PoliticsCord icon="🏛️" name="Politics" datas={CustomArraySlice(dd, 0, 2)} />
+        <LocalWeatherCord name="Local Weather" icon="🌤️" WeatherData={CustomArraySlice(oo, 0, 5)} />
       </div>
 
     </DetailsLeyout >

@@ -2,11 +2,11 @@ import { useEffect } from "react";
 
 
 import {useFetch} from "./../../hooks/CommonHooks";
-import { CustomNotification } from "./../utlis/tag";
+import { CustomNotification } from "./../../utilities/Element";
 import { useAuth } from "./../../context/AuthContext";
 import { ContextFocusBox } from "./../../context/FocusBoxContext";
 import Signin from "./Signin";
-import { API_URL } from "./../../congig";
+import { API_URL } from "./../../config";
 
 
 export default function Logout() {

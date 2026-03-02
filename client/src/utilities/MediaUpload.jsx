@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { FaImage, FaVideo, FaTimes, FaMusic, FaPlus, FaEdit, FaTrash, FaTasks } from "react-icons/fa";
 
+import { CustomNotification } from "./Element";
 import { useFetch } from "./../hooks/CommonHooks";
-
-
 
 
 
@@ -53,9 +52,14 @@ export const UploadsFile = ({
 
     /* ---------------- POST upload ---------------- */
     const uploadToServer = async (file) => {
+
+
         if (fetch.method !== "POST") return;
 
         try {
+
+
+
 
             const formData = new FormData();
             formData.append("file", file);
@@ -189,3 +193,77 @@ export const UploadsFile = ({
         </label>
     );
 };
+
+
+
+export function uploadToServer({ formData, refetch, method = "GET" }) {
+
+
+    const serverCall = async () => {
+
+        try {
+            const data = await refetch({
+                method,
+                body: formData,
+            });
+            return data
+
+        } catch {
+            return null
+
+        }
+    }
+
+    return serverCall()
+};
+
+export function FileInput({ handleFile, accept = "image", ...rest }) {
+
+    const localPreviewRef = useRef(null);
+
+    /* ---------------- file change ---------------- */
+    const handleFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+
+        if (localPreviewRef.current) {
+            URL.revokeObjectURL(localPreviewRef.current);
+        }
+        const previewUrl = URL.createObjectURL(file);
+        localPreviewRef.current = previewUrl;
+
+        handleFile(file, previewUrl)
+    };
+
+    useEffect(() => {
+        return () => {
+            if (localPreviewRef.current) {
+                URL.revokeObjectURL(localPreviewRef.current);
+            }
+        };
+    }, []);
+
+    return (
+        <>
+            <input {...rest}
+                accept={`${accept}/*`}
+                type="file"
+                className="hidden"
+                onChange={handleFileChange}
+            />
+
+        </>
+
+
+    )
+
+
+}
+export function MediaPreview({ url, className, children, ...rest }) {
+    return (
+        <label {...rest} className={`relative flex items-center justify-center cursor-pointer  `}>
+            <img src={url} alt="img" className={`w-full h-full hover:bg-gray-60 hover:bg-gray-200 ${className}`} />
+            {children}
+        </label>)
+}

@@ -18,16 +18,17 @@ const __dirname = path.dirname(__filename);
 import socket from "./socket.js";
 
 // Error handlers
-import errorHandler from "./Middleware/errorHender.js";
+import {commonErrorHandler , notFound }from "./Middleware/errorHender.js";
 
 // API Routes
-import auth from "./routes/authRoutes.js";
-import Comments from "./routes/Comments.js";
-import Likes from "./routes/Likes.js";
-import Articles from "./routes/Articles.js";
-import OpenAI from "./routes/OpenAI.js";
+// import OpenAI from "./routes/OpenAI.js";
+import Auth from "./routes/Auth.js";
+import Comment from "./routes/Comment.js";
+import Like from "./routes/Like.js";
+import Share from "./routes/Share.js";
+import Article from "./routes/Article.js";
 import Media from "./routes/Media.js";
-import Source from "./routes/configSource.js";
+import Source from "./routes/Source.js";
 
 
 
@@ -42,10 +43,10 @@ const server = http.createServer(app);
 app.use(
   cors({
     origin: [
-      "http://localhost:3000",
       "http://localhost:5173",
+      "http://localhost:3000",
       "https://bbcnews21.onrender.com"
-      
+
     ],
     credentials: true,
   }),
@@ -64,12 +65,14 @@ app.use((req, res, next) => {
   res.locals.__dirname = __dirname;
   next();
 });
+
+// app.use("/OpenAI", OpenAI);
 // 1️⃣ API routes (must come before React catch-all)
-app.use("/Auth/User", auth);
-app.use("/Comments", Comments);
-app.use("/Likes", Likes);
-app.use("/Articles", Articles);
-app.use("/OpenAI", OpenAI);
+app.use("/Auth/User", Auth);
+app.use("/Comments", Comment);
+app.use("/Likes", Like);
+app.use("/Share", Share);
+app.use("/Articles", Article);
 app.use("/Media", Media);
 app.use("/Source", Source);
 // 2️⃣ Serve React build static files
@@ -95,7 +98,7 @@ app.get(/.*/, (req, res) => {
 socket(server);
 
 // 6️⃣ Error handlers
-app.use(errorHandler.notFound);
-app.use(errorHandler.common);
+app.use(notFound);
+app.use(commonErrorHandler);
 
 export default server;

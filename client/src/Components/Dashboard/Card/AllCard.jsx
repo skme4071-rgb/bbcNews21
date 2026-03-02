@@ -1,13 +1,7 @@
 import { useState } from "react";
 import { Icons } from "./../Config";
 
-import {
-    TextareaAutoResize,
-    Select,
-    CRUDbutton,
 
-} from "./../../../utilities/CommonFuntion";
-import { UploadsFile } from "./../../../utilities/MediaUpload";
 const {
     Dashboard,
     Clock,
@@ -50,20 +44,20 @@ const {
     FileText,
     Menu,
     Delete,
-    Plus,
+    Plus
 } = Icons;
 
 import { NavButton } from "./CardLeyout";
-import {
-    CustomNavLink,
-    CustomLink,
-    CustomButton,
-} from "./../../../utilities/Element";
+import { CustomNavLink, CustomLink, CustomButton, CRUDbutton, Select, TextareaAutoResize, } from "./../../../utilities/Element";
+import { useFetch } from "../../../hooks/CommonHooks";
 
-import {API_URL  } from "./../../../congig";
+
+
+
+
 
 // Toolbar Component
-export const Toolbar = ({ index, handlePrev, handleNext }) => {
+export const Toolbar = ({ index, handlePrev, handleNext, uploadMedia }) => {
     return (
         <div className="flex items-center space-x-2 py-3 border-b bg-white">
             {/* Navigation */}
@@ -95,30 +89,41 @@ export const Toolbar = ({ index, handlePrev, handleNext }) => {
 
             {/* Media Inputs */}
             <div className="flex space-x-1">
-                <UploadsFile
-                    controlsPreview={(lo, prev) => {
-                        console.log(lo, prev);
-                    }}
-                    accept="image"
+                {/* Image */}
+                <label
+                    htmlFor="imageInput"
+                    className="p-2 hover:bg-gray-100 rounded cursor-pointer"
+                >
+                    <i className="fas fa-image" />
+                    <input
+                        id="imageInput"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) uploadMedia("image", file);
+                        }}
+                    />
+                </label>
 
-                    fetch={{
-                        url: `${API_URL}/Media/`,
-                        method: "POST",
-                    }}
-                    style="w-5 h-5 p-4  rounded"
-                />
-                <UploadsFile
-                    controlsPreview={(lo, prev) => {
-                        console.log(lo, prev);
-                    }}
-                    accept="video"
-
-                    fetch={{
-                        url: `${API_URL}/Media/`,
-                        method: "POST",
-                    }}
-                    style="w-5 h-5 p-4  rounded"
-                />
+                {/* Video */}
+                <label
+                    htmlFor="videoInput"
+                    className="p-2 hover:bg-gray-100 rounded cursor-pointer"
+                >
+                    <i className="fas fa-video" />
+                    <input
+                        id="videoInput"
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) uploadMedia("video", file);
+                        }}
+                    />
+                </label>
             </div>
 
             <div className="flex-1" />
@@ -128,6 +133,7 @@ export const Toolbar = ({ index, handlePrev, handleNext }) => {
     );
 };
 
+
 export const MediaInputPreview = ({
     index,
     handlePrev,
@@ -136,147 +142,28 @@ export const MediaInputPreview = ({
     urlToImage = null,
     urlToVideo = null,
 }) => {
-    const [files, setFiles] = useState({
-        image: {
-            loading: false,
-            url: null,
-        },
-        video: {
-            loading: false,
-            url: null,
-        },
-        audio: {
-            loading: false,
-            url: null,
-        },
-    });
-
-
     return (
         <div className="space-y-4">
-
-
-            <div className="flex items-center space-x-2 py-3 border-b bg-white">
-                {/* Navigation */}
-                <div className="flex space-x-1">
-                    <button onClick={handlePrev} className="p-2 hover:bg-gray-100 rounded">
-                        <i className="fa-solid fa-caret-left"></i>
-                    </button>
-                    <button onClick={handleNext} className="p-2 hover:bg-gray-100 rounded">
-                        <i className="fa-solid fa-caret-right"></i>
-                    </button>
-                </div>
-
-                <div className="w-px h-6 bg-gray-300" />
-
-                {/* Formatting Buttons */}
-                <div className="flex space-x-1">
-                    <button className="p-2 hover:bg-gray-100 rounded">
-                        <i className="fas fa-heading" />
-                    </button>
-                    <button className="p-2 hover:bg-gray-100 rounded">
-                        <i className="fas fa-list-ul" />
-                    </button>
-                    <button className="p-2 hover:bg-gray-100 rounded">
-                        <i className="fas fa-quote-left" />
-                    </button>
-                </div>
-
-                <div className="w-px h-6 bg-gray-300" />
-
-                {/* Media Inputs */}
-                <div className="flex space-x-1">
-                    <UploadsFile
-                        controlsPreview={(lo, pre) => {
-
-
-                            setFiles(prev => ({
-                                ...prev,
-                                image: {
-                                    loading: lo,
-                                    url: pre,
-                                },
-                            }));
-
-
-                        }}
-                        accept="image"
-
-                        fetch={{
-                            url: "http://localhost:3000/Media/",
-                            method: "POST",
-                        }}
-                        style="w-5 h-5 p-4  rounded"
-                    />
-                    <UploadsFile
-                        controlsPreview={(lo, pre) => {
-
-
-                            setFiles(prev => ({
-                                ...prev,
-                                video: {
-                                    loading: lo,
-                                    url: pre,
-                                },
-                            }));
-                        }}
-                        accept="video"
-
-                        fetch={{
-                            url: "http://localhost:3000/Media/",
-                            method: "POST",
-                        }}
-                        style="w-5 h-5 p-4  rounded"
-                    />
-                </div>
-
-                <div className="flex-1" />
-
-                <strong className="text-gray-500">Article: {index}</strong>
-            </div>
-
-
-
-
-
-
-
+            <Toolbar {...{ index, handlePrev, handleNext, uploadMedia }} />
             {/* Preview */}
-            {(files.image.url || files.video.url) && (
+            {(urlToImage || urlToVideo) && (
                 <div className="flex gap-3 h-36">
-
-                    {files.image.url && (
+                    {urlToImage && (
                         <div className="relative w-full overflow-hidden rounded">
-                            {files.image.loading && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-white/50">
-                                    <span className="loading-spinner" />
-                                </div>
-                            )}
-                            <img
-                                src={files.image.url}
-                                className="w-full h-full object-cover"
-                            />
+                            <img src={urlToImage} className="w-full h-full object-cover" />
                         </div>
                     )}
-
-                    {files.video.url && (
+                    {urlToVideo && (
                         <div className="relative w-full overflow-hidden rounded">
-                            {files.video.loading && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-white/50">
-                                    <span className="loading-spinner" />
-                                </div>
-                            )}
                             <video
-                                src={files.video.url}
+                                src={urlToVideo}
                                 controls
                                 className="w-full h-full object-cover"
                             />
                         </div>
                     )}
-
                 </div>
             )}
-
         </div>
     );
 };
@@ -427,7 +314,6 @@ export const Indicator = () => {
 export const EditorContent = ({
     metaState: { title, summary, description, content },
     handleChange,
-    CreateArticles
 }) => {
     return (
         <div className="p-5 border border-gray-200 rounded-xl mb-3 bg-white space-y-3 shadow-sm">
@@ -472,17 +358,29 @@ export const EditorContent = ({
                     icon={Plus}
                     color="green"
                     label="Create"
-                    onClick={() => {
-                        alert("ghgghg")
-                        CreateArticles()
-                    }}
+                    onClick={() => console.log("Create")}
                 />
 
-                <CRUDbutton icon={Edit} label="Edit" color="blue" />
+                <CRUDbutton
 
-                <CRUDbutton icon={Delete} label="Delete" color="red" />
+                    icon={Edit}
+                    label="Edit"
+                    color="blue"
+                />
 
-                <CRUDbutton icon={Queue} label="Queue" color="purple" />
+                <CRUDbutton
+
+                    icon={Delete}
+                    label="Delete"
+                    color="red"
+                />
+
+                <CRUDbutton
+
+                    icon={Queue}
+                    label="Queue"
+                    color="purple"
+                />
             </div>
         </div>
     );
@@ -584,7 +482,7 @@ export const AIWritingAssistant = ({ contentState: { content } }) => {
 };
 
 export const Categories = ({ handleChange, categoryState }) => {
-
+    const { file, setFile } = useState()
     return (
         <div className="border border-gray-200 rounded-lg p-4">
             <h3 className="font-semibold mb-3 flex items-center">
@@ -592,20 +490,14 @@ export const Categories = ({ handleChange, categoryState }) => {
                 Categories
             </h3>
 
+
             <div className="space-y-3 ">
+
+              
 
                 <Select
                     name="category"
-                    options={[
-                        "UK",
-                        "World",
-                        "Health",
-                        "Business",
-                        "Politice",
-                        "Technology",
-                        "Science",
-                        "Sport",
-                    ]}
+                    options={["UK", "World", "Health", "Business", "Politice", "Technology", "Science", "Sport"]}
                     value={categoryState}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
@@ -615,6 +507,7 @@ export const Categories = ({ handleChange, categoryState }) => {
         </div>
     );
 };
+
 
 export const Source = ({
     handleChange,
@@ -637,14 +530,7 @@ export const Source = ({
     /* ================= FORM ================= */
     const SourceForm = () => (
         <>
-            {/* <MediaUpload
-                isControlsPreview="true"
-                accept="image/*"
-                typeLabel="Upload Logo"
-                value={logo}
-                onChange={mediaHandleChange}
-            /> */}
-
+         
             <TextareaAutoResize
                 name="source.name"
                 value={name}

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useFetch } from "../../hooks/CommonHooks";
 import { CustomLoading } from "./../../utilities/Element";
-import { API_URL } from "./../../congig";
+import { API_URL } from "./../../config";
 
 export default function IsLoginCheck({ children }) {
     const { isLogin } = useAuth();

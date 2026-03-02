@@ -4,16 +4,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import Form from "./Form";
 import {useFetch }from "./../../hooks/CommonHooks";
-import {
-  CustomLink,
-  CustomError,
-  Input,
-  CustomNotification,
-} from "./../utlis/tag";
+
+import { CustomNotification , CustomError , CustomLink , Input} from "./../../utilities/Element";
 import { registerSchema } from "./validation";
 import { ContextFocusBox } from "./../../context/FocusBoxContext";
 import Signin from "./Signin";
-import { API_URL } from "./../../congig";
+import { API_URL } from "./../../config";
 
 export default function Register() {
   const { setFocusBox } = ContextFocusBox();

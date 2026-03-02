@@ -1,12 +1,14 @@
 import { Icons } from "./Config";
-
+// import { useFetch } from "./hooks/CommonHooks";
 
 
 
 const { FileText, Menu } = Icons;
 
 export default function Header() {
-
+    // const { refetch, } = useFetch("http://localhost:5173/isLogin")
+    // const res = refetch()
+    // console.log(res);
 
     return (
         <header className="bg-white shadow-lg border-b sticky top-0 z-40">
@@ -74,7 +76,7 @@ export default function Header() {
                     <div className="relative">
                         <button className="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded-lg" id="userMenuBtn">
                             <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-
+                                আহ
                             </div>
                             <i className="fas fa-chevron-down text-xs text-gray-400"></i>
                         </button>

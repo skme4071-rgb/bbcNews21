@@ -6,6 +6,7 @@
 
 .bbc-red {
   background-color: #bb1919;
+
 }
 
 .bbc-red-hover:hover {
@@ -84,12 +85,14 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+ 
 }
 
 .glass-effect {
   backdrop-filter: blur(10px);
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.2);
+ 
 }
 
 /* Auth Modal Styles */

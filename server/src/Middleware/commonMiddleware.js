@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import createError from "http-errors";
-import User from "./../Models/userSchema.js";
+import {User }from "./../Models/Model.js";
 
 //accessRole
 export const accessRole = (roles = ["user"]) => {

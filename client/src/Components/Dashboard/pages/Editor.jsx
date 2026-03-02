@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useFetch } from "../../../hooks/CommonHooks";
-import { Source } from "./../Card/Source";
-import { API_URL } from "./../../../congig";
+// import {Source} from "./../Card/Source";
 
 import {
     SEO,
@@ -17,10 +16,10 @@ export const EMPTY_ARTICLE = {
     category: "",
 
     source: {
-        name: "iqbal",
-        logo: "", // File | URL
-        url: "",
-        type: "",
+        name: "",
+        logo: null, // File | URL
+        url: null,
+        type: null,
     },
 
     author: "",
@@ -40,29 +39,21 @@ export const EMPTY_ARTICLE = {
         score: 0,
     },
 
+    media: [],
 
+    AIAssistantMessage: "",
 };
 
 
 
-
 export default function Editor() {
-    const { res, refetch } = useFetch(`${API_URL}/Articles`);
-
-
-
-
-
-
-
-    useEffect(() => {
-        refetch();
-
-
-    }, []);
+    const { res, refetch } = useFetch("http://localhost:3000/Articles");
+    
+ 
 
     const [index, setIndex] = useState(0);
-    // main article state (single source of truth)
+ 
+
     const [article, setArticle] = useState(() => {
         const saved = localStorage.getItem("article");
         return saved ? JSON.parse(saved) : EMPTY_ARTICLE;
@@ -72,15 +63,8 @@ export default function Editor() {
 
 
 
-    const CreateArticles = async () => {
-        const data = await refetch({
-            method: "POST",
-            body: article
-        })
+  
 
-
-
-    }
     /* =================== Load article from API ============== */
     useEffect(() => {
         if (res?.success && res.articles.length > 0) {
@@ -111,6 +95,8 @@ export default function Editor() {
             setArticle((prev) => ({ ...prev, [name]: value }));
         }
     };
+
+  
 
     const handlePrev = () => {
         if (!res?.articles) return;
@@ -144,14 +130,13 @@ export default function Editor() {
                                 index,
                                 handlePrev,
                                 handleNext,
-
-                                urlToImage: article?.urlToImage,
-                                urlToVideo: article?.urlToVideo,
+                               
+                               
                             }}
                         />
 
                         {/* Editor */}
-                        <EditorContent metaState={article} CreateArticles={CreateArticles} handleChange={handleChange} />
+                        <EditorContent metaState={article} handleChange={handleChange} />
 
                         <AIWritingAssistant contentState={article} />
 
@@ -160,13 +145,13 @@ export default function Editor() {
 
                     {/* Sidebar */}
                     <div className="space-y-6">
-                        <Categories
+                        {/* <Categories
                             categoryState={article.category}
                             handleChange={handleChange}
-                        />
+                        />gjg */}
                         {/* <Source {...{ ...article.source, handleChange, mediaHandleChange }} /> */}
                         {/* <Source role="admin" /> */}
-                        <SEO {...{ ...article.SEO, handleChange }} />
+                        {/* <SEO {...{ ...article.SEO, handleChange }} /> */}
                     </div>
                 </div>
             </div>

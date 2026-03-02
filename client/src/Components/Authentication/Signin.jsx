@@ -5,12 +5,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import Form from "./Form";
-import{ useFetch }from "../../hooks/CommonHooks";
-import { CustomError, Input, CustomLink, CustomNotification } from "./../utlis/tag";
+import { useFetch } from "../../hooks/CommonHooks";
+import { CustomError, Input, CustomLink, CustomNotification } from "./../../utilities/Element";
 import { signinSchema } from "./validation";
 import { ContextFocusBox } from "../../context/FocusBoxContext";
 import { useAuth } from "../../context/AuthContext";
-import {  API_URL} from "./../../congig";
+import { API_URL } from "./../../config";
 
 export default function Signin() {
     const { closeFocusBox } = ContextFocusBox();
