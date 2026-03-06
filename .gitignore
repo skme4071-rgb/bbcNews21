@@ -2,13 +2,29 @@ node_modules/
 
 logs/
 coverage/
+*.log
 
-.env
-.env.production
 
+# client 
 client/node_modules/
 client/dist/
+client/.env
+client/.env.production
 
-*.log
-upload
 
+
+# dashboard
+dashboard/node_modules/
+dashboard/dist/
+dashboard/.env
+dashboard/.env.production
+
+
+# server 
+server/node_modules/
+server/.env
+server/.env.production
+
+
+# data  
+uploads

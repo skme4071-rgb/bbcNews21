@@ -8,8 +8,8 @@ import { createUploaderArray } from "./../Middleware/multer.js";
 const router = express.Router();
 
 // ================= MIDDLEWARE =================
-router.use(LoginCheck);
-router.use(accessRole(["admin", "editor"]))
+router.use(LoginCheck, accessRole(["admin", "editor"]));
+
 
 // ================= CRUD ROUTES =================
 

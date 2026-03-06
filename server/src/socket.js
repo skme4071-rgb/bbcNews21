@@ -1,8 +1,5 @@
 import { Server } from "socket.io";
-const envFile =
-    process.env.NODE_ENV === "production"
-        ? ".env.production"
-        : ".env";
+
 
 export default (server) => {
 

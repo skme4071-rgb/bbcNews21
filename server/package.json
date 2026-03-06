@@ -9,7 +9,7 @@
     "prod": "cross-env NODE_ENV=production node src/server.js",
     "dev": "cross-env NODE_ENV=development nodemon src/server.js",
     "start": "node src/server.js",
-    "build": "cd ../client && npm install && npm run build"
+    "build": "cd ../client && npm install && npm run build && cd ../dashboard && npm install && npm run build"
   },
   "keywords": [],
   "author": "",

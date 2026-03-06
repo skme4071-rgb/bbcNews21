@@ -1,0 +1,16 @@
+{
+  "name": "bbcnews21",
+  "private": true,
+  "workspaces": [
+    "client",
+    "dashboard",
+    "server"
+  ],
+  "scripts": {
+    "build": "npm run build -w client && npm run build -w dashboard",
+    "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client\" \"npm run dev -w dashboard\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

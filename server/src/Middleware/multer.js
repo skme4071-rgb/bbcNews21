@@ -8,7 +8,8 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const uploadDir = path.join(__dirname, "../../upload/");
+
+const uploadDir = path.join(__dirname, "./../../../uploads");
 
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
@@ -63,7 +64,6 @@ export const createUploaderArray = (
 
 
 
-
 export const createUploaderfields = (
     fields = []
 ) => {
@@ -71,8 +71,8 @@ export const createUploaderfields = (
 
         const fileFilter = (req, file, cb) => {
 
-            console.log();
-            
+
+
             // Find field config
             const fieldConfig = fields.find(f => f.name === file.fieldname);
 
@@ -130,9 +130,6 @@ export const createUploaderfields = (
         });
     };
 };
-
-
-
 
 
 // 🔥 F ile cleanup if uploaded

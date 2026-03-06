@@ -1,0 +1,2678 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BBC News - Admin Dashboard v9</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
+
+      .font-inter {
+        font-family: "Inter", sans-serif;
+      }
+
+      .bbc-red {
+        background-color: #bb1919;
+      }
+      .bbc-red-hover:hover {
+        background-color: #a01616;
+      }
+      .bbc-gray {
+        background-color: #f6f6f6;
+      }
+      .bbc-dark-gray {
+        background-color: #404040;
+      }
+
+      /* Admin Dashboard Styles */
+      .admin-sidebar {
+        background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
+        box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
+      }
+
+      .admin-nav-item {
+        transition: all 0.3s ease;
+        border-radius: 8px;
+        margin: 4px 0;
+      }
+
+      .admin-nav-item:hover {
+        background: rgba(59, 130, 246, 0.1);
+        transform: translateX(4px);
+      }
+
+      .admin-nav-item.active {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      }
+
+      .stat-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s ease;
+      }
+
+      .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+      }
+
+      .data-table {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      }
+
+      .table-row {
+        transition: all 0.2s ease;
+      }
+
+      .table-row:hover {
+        background-color: #f8fafc;
+      }
+
+      .status-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .status-active {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .status-inactive {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      .status-pending {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .status-suspended {
+        background: #f3e8ff;
+        color: #7c3aed;
+      }
+
+      .role-admin {
+        background: #fecaca;
+        color: #991b1b;
+      }
+
+      .role-editor {
+        background: #ddd6fe;
+        color: #7c3aed;
+      }
+
+      .role-reporter {
+        background: #bfdbfe;
+        color: #1d4ed8;
+      }
+
+      .role-user {
+        background: #d1fae5;
+        color: #065f46;
+      }
+
+      /* Message System Styles */
+      .message-thread {
+        transition: all 0.3s ease;
+        border-left: 4px solid transparent;
+      }
+
+      .message-thread:hover {
+        background-color: #f8fafc;
+        border-left-color: #3b82f6;
+      }
+
+      .message-thread.unread {
+        background-color: #eff6ff;
+        border-left-color: #2563eb;
+      }
+
+      .message-bubble {
+        max-width: 70%;
+        word-wrap: break-word;
+      }
+
+      .message-sent {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+        margin-left: auto;
+      }
+
+      .message-received {
+        background: #f3f4f6;
+        color: #374151;
+      }
+
+      .priority-high {
+        border-left: 4px solid #ef4444;
+      }
+
+      .priority-medium {
+        border-left: 4px solid #f59e0b;
+      }
+
+      .priority-low {
+        border-left: 4px solid #10b981;
+      }
+
+      /* News Article Management */
+      .article-card {
+        transition: all 0.3s ease;
+        border: 1px solid #e5e7eb;
+      }
+
+      .article-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+      }
+
+      .article-status-draft {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .article-status-review {
+        background: #ddd6fe;
+        color: #7c3aed;
+      }
+
+      .article-status-published {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .article-status-archived {
+        background: #f3f4f6;
+        color: #6b7280;
+      }
+
+      /* Loading Animation */
+      .loading-spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #bb1919;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* Enhanced Mobile Responsive Styles */
+      @media (max-width: 768px) {
+        .admin-sidebar {
+          transform: translateX(-100%);
+          transition: transform 0.3s ease;
+        }
+
+        .admin-sidebar.show {
+          transform: translateX(0);
+        }
+
+        .mobile-admin-overlay {
+          background: rgba(0, 0, 0, 0.5);
+          backdrop-filter: blur(4px);
+        }
+      }
+
+      /* Toast Notification Styles */
+      .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        min-width: 300px;
+        padding: 16px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        transform: translateX(400px);
+        transition: transform 0.3s ease;
+      }
+
+      .toast.show {
+        transform: translateX(0);
+      }
+
+      .toast.success {
+        background: linear-gradient(135deg, #10b981, #059669);
+      }
+
+      .toast.error {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+      }
+
+      .toast.info {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+      }
+
+      .toast.warning {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+      }
+
+      /* Modal Styles */
+      .modal-backdrop {
+        backdrop-filter: blur(8px);
+        background: rgba(0, 0, 0, 0.7);
+      }
+
+      .modal-content {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      }
+
+      /* Form Styles */
+      .form-input {
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+      }
+
+      .form-input:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        transform: translateY(-1px);
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+      }
+
+      .btn-danger {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+      }
+
+      .btn-danger:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+      }
+
+      /* Chart Styles */
+      .chart-container {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      }
+
+      .chart-bar {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        border-radius: 4px;
+        transition: all 0.3s ease;
+      }
+
+      .chart-bar:hover {
+        transform: scaleY(1.1);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      }
+
+      /* Notification Badge */
+      .notification-badge {
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #bb1919;
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #a01616;
+      }
+    </style>
+  </head>
+  <body class="font-inter bg-gray-100 text-gray-900 antialiased">
+    <!-- Admin Dashboard -->
+    <div id="admin-dashboard" class="min-h-screen">
+      <!-- Mobile Admin Overlay -->
+      <div
+        id="mobile-admin-overlay"
+        class="md:hidden fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-40"
+        onclick="toggleAdminSidebar()"
+      ></div>
+
+      <!-- Admin Sidebar -->
+      <div
+        id="admin-sidebar"
+        class="admin-sidebar fixed left-0 top-0 h-full w-64 z-50 overflow-y-auto"
+      >
+        <div class="p-6">
+          <div class="flex items-center space-x-3 mb-8">
+            <div
+              class="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center"
+            >
+              <span class="text-white font-bold">BBC</span>
+            </div>
+            <div>
+              <h2 class="text-white font-bold text-lg">Admin Panel</h2>
+              <p class="text-gray-400 text-sm">Management Dashboard</p>
+            </div>
+          </div>
+
+          <nav class="space-y-2">
+            <button
+              onclick="showAdminSection('dashboard')"
+              class="admin-nav-item active w-full text-left px-4 py-3 text-white flex items-center space-x-3"
+            >
+              <span>📊</span>
+              <span>Dashboard</span>
+            </button>
+            <button
+              onclick="showAdminSection('users')"
+              class="admin-nav-item w-full text-left px-4 py-3 text-gray-300 hover:text-white flex items-center space-x-3"
+            >
+              <span>👥</span>
+              <span>User Management</span>
+              <span
+                class="ml-auto bg-blue-500 text-white text-xs px-2 py-1 rounded-full"
+                >247</span
+              >
+            </button>
+            <button
+              onclick="showAdminSection('reporters')"
+              class="admin-nav-item w-full text-left px-4 py-3 text-gray-300 hover:text-white flex items-center space-x-3"
+            >
+              <span>📰</span>
+              <span>Reporters</span>
+              <span
+                class="ml-auto bg-green-500 text-white text-xs px-2 py-1 rounded-full"
+                >23</span
+              >
+            </button>
+            <button
+              onclick="showAdminSection('editors')"
+              class="admin-nav-item w-full text-left px-4 py-3 text-gray-300 hover:text-white flex items-center space-x-3"
+            >
+              <span>✏️</span>
+              <span>Editors</span>
+              <span
+                class="ml-auto bg-purple-500 text-white text-xs px-2 py-1 rounded-full"
+                >12</span
+              >
+            </button>
+            <button
+              onclick="showAdminSection('articles')"
+              class="admin-nav-item w-full text-left px-4 py-3 text-gray-300 hover:text-white flex items-center space-x-3"
+            >
+              <span>📝</span>
+              <span>News Articles</span>
+              <span
+                class="ml-auto bg-yellow-500 text-white text-xs px-2 py-1 rounded-full"
+                >156</span
+              >
+            </button>
+            <button
+              onclick="showAdminSection('messages')"
+              class="admin-nav-item w-full text-left px-4 py-3 text-gray-300 hover:text-white flex items-center space-x-3"
+            >
+              <span>💬</span>
+              <span>Messages</span>
+              <span
+                class="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full notification-badge"
+                >8</span
+              >
+            </button>
+            <button
+              onclick="showAdminSection('analytics')"
+              class="admin-nav-item w-full text-left px-4 py-3 text-gray-300 hover:text-white flex items-center space-x-3"
+            >
+              <span>📈</span>
+              <span>Analytics</span>
+            </button>
+            <button
+              onclick="showAdminSection('settings')"
+              class="admin-nav-item w-full text-left px-4 py-3 text-gray-300 hover:text-white flex items-center space-x-3"
+            >
+              <span>⚙️</span>
+              <span>Settings</span>
+            </button>
+          </nav>
+
+          <div class="mt-8 pt-8 border-t border-gray-700">
+            <div class="flex items-center space-x-3 mb-4">
+              <div
+                class="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center"
+              >
+                <span class="text-white text-sm font-bold">AD</span>
+              </div>
+              <div>
+                <p class="text-white font-medium">Admin User</p>
+                <p class="text-gray-400 text-xs">Super Administrator</p>
+              </div>
+            </div>
+            <button
+              onclick="logout()"
+              class="w-full text-left px-4 py-3 text-gray-400 hover:text-white flex items-center space-x-3 transition-colors"
+            >
+              <span>🚪</span>
+              <span>Sign Out</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Main Content -->
+      <div class="md:ml-64 min-h-screen">
+        <!-- Admin Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+              <button
+                onclick="toggleAdminSidebar()"
+                class="md:hidden p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <svg
+                  class="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 6h16M4 12h16M4 18h16"
+                  ></path>
+                </svg>
+              </button>
+              <h1 id="admin-title" class="text-2xl font-bold text-gray-800">
+                Dashboard Overview
+              </h1>
+            </div>
+            <div class="flex items-center space-x-4">
+              <button
+                onclick="openMessageModal()"
+                class="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <span class="text-xl">💬</span>
+                <span
+                  class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center notification-badge"
+                  >8</span
+                >
+              </button>
+              <button
+                onclick="toggleNotifications()"
+                class="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <span class="text-xl">🔔</span>
+                <span
+                  class="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center"
+                  >3</span
+                >
+              </button>
+              <div class="flex items-center space-x-2">
+                <div
+                  class="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center"
+                >
+                  <span class="text-white text-sm font-bold">AD</span>
+                </div>
+                <span class="font-medium">Admin User</span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Admin Content Area -->
+        <main class="p-6">
+          <!-- Dashboard Section -->
+          <div id="admin-dashboard-content" class="admin-section">
+            <!-- Stats Cards -->
+            <div
+              class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+            >
+              <div class="stat-card p-6 rounded-xl">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-medium text-gray-600">Total Users</p>
+                    <p class="text-3xl font-bold text-gray-900">12,847</p>
+                    <p class="text-sm text-green-600">+12% from last month</p>
+                  </div>
+                  <div
+                    class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center"
+                  >
+                    <span class="text-2xl">👥</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="stat-card p-6 rounded-xl">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-medium text-gray-600">
+                      Active Reporters
+                    </p>
+                    <p class="text-3xl font-bold text-gray-900">23</p>
+                    <p class="text-sm text-green-600">+3 this week</p>
+                  </div>
+                  <div
+                    class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center"
+                  >
+                    <span class="text-2xl">📰</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="stat-card p-6 rounded-xl">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-medium text-gray-600">
+                      Articles Today
+                    </p>
+                    <p class="text-3xl font-bold text-gray-900">47</p>
+                    <p class="text-sm text-blue-600">+8 pending review</p>
+                  </div>
+                  <div
+                    class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center"
+                  >
+                    <span class="text-2xl">📝</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="stat-card p-6 rounded-xl">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-medium text-gray-600">
+                      Unread Messages
+                    </p>
+                    <p class="text-3xl font-bold text-gray-900">8</p>
+                    <p class="text-sm text-red-600">Requires attention</p>
+                  </div>
+                  <div
+                    class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center"
+                  >
+                    <span class="text-2xl">💬</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Charts and Recent Activity -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <!-- User Activity Chart -->
+              <div class="chart-container">
+                <h3 class="text-lg font-semibold mb-4">
+                  User Activity (Last 7 Days)
+                </h3>
+                <div class="flex items-end space-x-2 h-40">
+                  <div
+                    class="chart-bar w-8 bg-blue-500"
+                    style="height: 60%"
+                  ></div>
+                  <div
+                    class="chart-bar w-8 bg-blue-500"
+                    style="height: 75%"
+                  ></div>
+                  <div
+                    class="chart-bar w-8 bg-blue-500"
+                    style="height: 45%"
+                  ></div>
+                  <div
+                    class="chart-bar w-8 bg-blue-500"
+                    style="height: 90%"
+                  ></div>
+                  <div
+                    class="chart-bar w-8 bg-blue-500"
+                    style="height: 65%"
+                  ></div>
+                  <div
+                    class="chart-bar w-8 bg-blue-500"
+                    style="height: 80%"
+                  ></div>
+                  <div
+                    class="chart-bar w-8 bg-blue-500"
+                    style="height: 100%"
+                  ></div>
+                </div>
+                <div class="flex justify-between text-xs text-gray-500 mt-2">
+                  <span>Mon</span>
+                  <span>Tue</span>
+                  <span>Wed</span>
+                  <span>Thu</span>
+                  <span>Fri</span>
+                  <span>Sat</span>
+                  <span>Sun</span>
+                </div>
+              </div>
+
+              <!-- Recent Activity -->
+              <div class="chart-container">
+                <h3 class="text-lg font-semibold mb-4">
+                  Recent System Activity
+                </h3>
+                <div class="space-y-3">
+                  <div
+                    class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg"
+                  >
+                    <div
+                      class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center"
+                    >
+                      <span class="text-green-600 text-sm">📝</span>
+                    </div>
+                    <div class="flex-1">
+                      <p class="text-sm font-medium">
+                        New article submitted by Sarah Johnson
+                      </p>
+                      <p class="text-xs text-gray-500">2 minutes ago</p>
+                    </div>
+                  </div>
+
+                  <div
+                    class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg"
+                  >
+                    <div
+                      class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center"
+                    >
+                      <span class="text-blue-600 text-sm">👤</span>
+                    </div>
+                    <div class="flex-1">
+                      <p class="text-sm font-medium">
+                        New reporter registered: Mike Chen
+                      </p>
+                      <p class="text-xs text-gray-500">15 minutes ago</p>
+                    </div>
+                  </div>
+
+                  <div
+                    class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg"
+                  >
+                    <div
+                      class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center"
+                    >
+                      <span class="text-purple-600 text-sm">✏️</span>
+                    </div>
+                    <div class="flex-1">
+                      <p class="text-sm font-medium">
+                        Article approved by Editor David Wilson
+                      </p>
+                      <p class="text-xs text-gray-500">1 hour ago</p>
+                    </div>
+                  </div>
+
+                  <div
+                    class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg"
+                  >
+                    <div
+                      class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center"
+                    >
+                      <span class="text-red-600 text-sm">💬</span>
+                    </div>
+                    <div class="flex-1">
+                      <p class="text-sm font-medium">
+                        Urgent message from News Director
+                      </p>
+                      <p class="text-xs text-gray-500">3 hours ago</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- User Management Section -->
+          <div id="admin-users-content" class="admin-section hidden">
+            <div class="flex justify-between items-center mb-6">
+              <h2 class="text-2xl font-bold">User Management</h2>
+              <div class="flex space-x-3">
+                <button
+                  onclick="exportUsers()"
+                  class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Export Users
+                </button>
+                <button
+                  onclick="openUserModal()"
+                  class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Add New User
+                </button>
+              </div>
+            </div>
+
+            <!-- User Filters -->
+            <div class="bg-white p-4 rounded-lg shadow-sm mb-6">
+              <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <input
+                  type="text"
+                  placeholder="Search users..."
+                  class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <select
+                  class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option>All Roles</option>
+                  <option>Admin</option>
+                  <option>Editor</option>
+                  <option>Reporter</option>
+                  <option>User</option>
+                </select>
+                <select
+                  class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option>All Status</option>
+                  <option>Active</option>
+                  <option>Inactive</option>
+                  <option>Suspended</option>
+                </select>
+                <select
+                  class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option>All Departments</option>
+                  <option>News</option>
+                  <option>Sports</option>
+                  <option>Business</option>
+                  <option>Technology</option>
+                </select>
+                <button
+                  class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+
+            <!-- Users Table -->
+            <div class="data-table">
+              <div class="overflow-x-auto">
+                <table class="w-full">
+                  <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        <input type="checkbox" class="rounded" />
+                      </th>
+                      <th
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        User
+                      </th>
+                      <th
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Role
+                      </th>
+                      <th
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Department
+                      </th>
+                      <th
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Status
+                      </th>
+                      <th
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Last Login
+                      </th>
+                      <th
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-200">
+                    <tr class="table-row">
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <input type="checkbox" class="rounded" />
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                          <div
+                            class="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center"
+                          >
+                            <span class="text-white font-bold text-sm">AD</span>
+                          </div>
+                          <div class="ml-4">
+                            <div class="text-sm font-medium text-gray-900">
+                              Admin User
+                            </div>
+                            <div class="text-sm text-gray-500">
+                              admin@bbc.com
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="status-badge role-admin">Admin</span>
+                      </td>
+                      <td
+                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                      >
+                        System
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="status-badge status-active">Active</span>
+                      </td>
+                      <td
+                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                      >
+                        Online now
+                      </td>
+                      <td
+                        class="px-6 py-4 whitespace-nowrap text-sm font-medium"
+                      >
+                        <div class="flex space-x-2">
+                          <button
+                            onclick="editUser('admin@bbc.com')"
+                            class="text-blue-600 hover:text-blue-900"
+                          >
+                            Edit
+                          </button>
+                          <span class="text-gray-400">Protected</span>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <tr class="table-row">
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <input type="checkbox" class="rounded" />
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                          <div
+                            class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center"
+                          >
+                            <span class="text-white font-bold text-sm">DW</span>
+                          </div>
+                          <div class="ml-4">
+                            <div class="text-sm font-medium text-gray-900">
+                              David Wilson
+                            </div>
+                            <div class="text-sm text-gray-500">
+                              david.wilson@bbc.com
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="status-badge role-editor">Editor</span>
+                      </td>
+                      <td
+                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                      >
+                        News
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="status-badge status-active">Active</span>
+                      </td>
+                      <td
+                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                      >
+                        30 minutes ago
+                      </td>
+                      <td
+                        class="px-6 py-4 whitespace-nowrap text-sm font-medium"
+                      >
+                        <div class="flex space-x-2">
+                          <button
+                            onclick="editUser('david.wilson@bbc.com')"
+                            class="text-blue-600 hover:text-blue-900"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onclick="messageUser('david.wilson@bbc.com')"
+                            class="text-green-600 hover:text-green-900"
+                          >
+                            Message
+                          </button>
+                          <button
+                            onclick="suspendUser('david.wilson@bbc.com')"
+                            class="text-yellow-600 hover:text-yellow-900"
+                          >
+                            Suspend
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <tr class="table-row">
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <input type="checkbox" class="rounded" />
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                          <div
+                            class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center"
+                          >
+                            <span class="text-white font-bold text-sm">SJ</span>
+                          </div>
+                          <div class="ml-4">
+                            <div class="text-sm font-medium text-gray-900">
+                              Sarah Johnson
+                            </div>
+                            <div class="text-sm text-gray-500">
+                              sarah.johnson@bbc.com
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="status-badge role-reporter">Reporter</span>
+                      </td>
+                      <td
+                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                      >
+                        Environment
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="status-badge status-active">Active</span>
+                      </td>
+                      <td
+                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                      >
+                        2 hours ago
+                      </td>
+                      <td
+                        class="px-6 py-4 whitespace-nowrap text-sm font-medium"
+                      >
+                        <div class="flex space-x-2">
+                          <button
+                            onclick="editUser('sarah.johnson@bbc.com')"
+                            class="text-blue-600 hover:text-blue-900"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onclick="messageUser('sarah.johnson@bbc.com')"
+                            class="text-green-600 hover:text-green-900"
+                          >
+                            Message
+                          </button>
+                          <button
+                            onclick="suspendUser('sarah.johnson@bbc.com')"
+                            class="text-yellow-600 hover:text-yellow-900"
+                          >
+                            Suspend
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <tr class="table-row">
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <input type="checkbox" class="rounded" />
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                          <div
+                            class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center"
+                          >
+                            <span class="text-white font-bold text-sm">MC</span>
+                          </div>
+                          <div class="ml-4">
+                            <div class="text-sm font-medium text-gray-900">
+                              Mike Chen
+                            </div>
+                            <div class="text-sm text-gray-500">
+                              mike.chen@bbc.com
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="status-badge role-reporter">Reporter</span>
+                      </td>
+                      <td
+                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                      >
+                        Technology
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="status-badge status-pending">Pending</span>
+                      </td>
+                      <td
+                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                      >
+                        Never
+                      </td>
+                      <td
+                        class="px-6 py-4 whitespace-nowrap text-sm font-medium"
+                      >
+                        <div class="flex space-x-2">
+                          <button
+                            onclick="approveUser('mike.chen@bbc.com')"
+                            class="text-green-600 hover:text-green-900"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onclick="editUser('mike.chen@bbc.com')"
+                            class="text-blue-600 hover:text-blue-900"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onclick="deleteUser('mike.chen@bbc.com')"
+                            class="text-red-600 hover:text-red-900"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Pagination -->
+              <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center">
+                    <p class="text-sm text-gray-700">
+                      Showing <span class="font-medium">1</span> to
+                      <span class="font-medium">4</span> of
+                      <span class="font-medium">247</span> results
+                    </p>
+                  </div>
+                  <div class="flex space-x-2">
+                    <button
+                      class="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-500 hover:bg-gray-50"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      class="px-3 py-1 bg-blue-600 text-white rounded-md text-sm"
+                    >
+                      1
+                    </button>
+                    <button
+                      class="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-500 hover:bg-gray-50"
+                    >
+                      2
+                    </button>
+                    <button
+                      class="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-500 hover:bg-gray-50"
+                    >
+                      3
+                    </button>
+                    <button
+                      class="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-500 hover:bg-gray-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reporters Section -->
+          <div id="admin-reporters-content" class="admin-section hidden">
+            <div class="flex justify-between items-center mb-6">
+              <h2 class="text-2xl font-bold">Reporter Management</h2>
+              <div class="flex space-x-3">
+                <button
+                  onclick="assignStory()"
+                  class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  Assign Story
+                </button>
+                <button
+                  onclick="openReporterModal()"
+                  class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Add Reporter
+                </button>
+              </div>
+            </div>
+
+            <!-- Reporter Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+              <div class="bg-white p-4 rounded-lg shadow-sm">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm text-gray-600">Active Reporters</p>
+                    <p class="text-2xl font-bold text-blue-600">23</p>
+                  </div>
+                  <span class="text-2xl">📰</span>
+                </div>
+              </div>
+              <div class="bg-white p-4 rounded-lg shadow-sm">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm text-gray-600">Stories This Week</p>
+                    <p class="text-2xl font-bold text-green-600">156</p>
+                  </div>
+                  <span class="text-2xl">📝</span>
+                </div>
+              </div>
+              <div class="bg-white p-4 rounded-lg shadow-sm">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm text-gray-600">Pending Review</p>
+                    <p class="text-2xl font-bold text-yellow-600">12</p>
+                  </div>
+                  <span class="text-2xl">⏳</span>
+                </div>
+              </div>
+              <div class="bg-white p-4 rounded-lg shadow-sm">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm text-gray-600">Published Today</p>
+                    <p class="text-2xl font-bold text-purple-600">8</p>
+                  </div>
+                  <span class="text-2xl">✅</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Reporters Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center space-x-4 mb-4">
+                  <div
+                    class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center"
+                  >
+                    <span class="text-white font-bold">SJ</span>
+                  </div>
+                  <div>
+                    <h3 class="font-semibold">Sarah Johnson</h3>
+                    <p class="text-sm text-gray-600">Environment Reporter</p>
+                  </div>
+                </div>
+                <div class="space-y-2 mb-4">
+                  <div class="flex justify-between text-sm">
+                    <span class="text-gray-600">Articles This Month:</span>
+                    <span class="font-medium">12</span>
+                  </div>
+                  <div class="flex justify-between text-sm">
+                    <span class="text-gray-600">Average Rating:</span>
+                    <span class="font-medium">4.8/5</span>
+                  </div>
+                  <div class="flex justify-between text-sm">
+                    <span class="text-gray-600">Status:</span>
+                    <span class="status-badge status-active">Active</span>
+                  </div>
+                </div>
+                <div class="flex space-x-2">
+                  <button
+                    onclick="viewReporterProfile('sarah.johnson@bbc.com')"
+                    class="flex-1 bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition-colors"
+                  >
+                    View Profile
+                  </button>
+                  <button
+                    onclick="messageUser('sarah.johnson@bbc.com')"
+                    class="bg-gray-200 text-gray-700 px-3 py-2 rounded text-sm hover:bg-gray-300 transition-colors"
+                  >
+                    Message
+                  </button>
+                </div>
+              </div>
+
+              <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center space-x-4 mb-4">
+                  <div
+                    class="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center"
+                  >
+                    <span class="text-white font-bold">MC</span>
+                  </div>
+                  <div>
+                    <h3 class="font-semibold">Mike Chen</h3>
+                    <p class="text-sm text-gray-600">Technology Reporter</p>
+                  </div>
+                </div>
+                <div class="space-y-2 mb-4">
+                  <div class="flex justify-between text-sm">
+                    <span class="text-gray-600">Articles This Month:</span>
+                    <span class="font-medium">0</span>
+                  </div>
+                  <div class="flex justify-between text-sm">
+                    <span class="text-gray-600">Average Rating:</span>
+                    <span class="font-medium">N/A</span>
+                  </div>
+                  <div class="flex justify-between text-sm">
+                    <span class="text-gray-600">Status:</span>
+                    <span class="status-badge status-pending">Pending</span>
+                  </div>
+                </div>
+                <div class="flex space-x-2">
+                  <button
+                    onclick="approveReporter('mike.chen@bbc.com')"
+                    class="flex-1 bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition-colors"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onclick="messageUser('mike.chen@bbc.com')"
+                    class="bg-gray-200 text-gray-700 px-3 py-2 rounded text-sm hover:bg-gray-300 transition-colors"
+                  >
+                    Message
+                  </button>
+                </div>
+              </div>
+
+              <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center space-x-4 mb-4">
+                  <div
+                    class="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center"
+                  >
+                    <span class="text-white font-bold">JB</span>
+                  </div>
+                  <div>
+                    <h3 class="font-semibold">James Brown</h3>
+                    <p class="text-sm text-gray-600">Sports Reporter</p>
+                  </div>
+                </div>
+                <div class="space-y-2 mb-4">
+                  <div class="flex justify-between text-sm">
+                    <span class="text-gray-600">Articles This Month:</span>
+                    <span class="font-medium">18</span>
+                  </div>
+                  <div class="flex justify-between text-sm">
+                    <span class="text-gray-600">Average Rating:</span>
+                    <span class="font-medium">4.6/5</span>
+                  </div>
+                  <div class="flex justify-between text-sm">
+                    <span class="text-gray-600">Status:</span>
+                    <span class="status-badge status-active">Active</span>
+                  </div>
+                </div>
+                <div class="flex space-x-2">
+                  <button
+                    onclick="viewReporterProfile('james.brown@bbc.com')"
+                    class="flex-1 bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition-colors"
+                  >
+                    View Profile
+                  </button>
+                  <button
+                    onclick="messageUser('james.brown@bbc.com')"
+                    class="bg-gray-200 text-gray-700 px-3 py-2 rounded text-sm hover:bg-gray-300 transition-colors"
+                  >
+                    Message
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Editors Section -->
+          <div id="admin-editors-content" class="admin-section hidden">
+            <div class="flex justify-between items-center mb-6">
+              <h2 class="text-2xl font-bold">Editor Management</h2>
+              <div class="flex space-x-3">
+                <button
+                  onclick="viewEditorialCalendar()"
+                  class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  Editorial Calendar
+                </button>
+                <button
+                  onclick="openEditorModal()"
+                  class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Add Editor
+                </button>
+              </div>
+            </div>
+
+            <!-- Editor Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+              <div class="bg-white p-4 rounded-lg shadow-sm">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm text-gray-600">Active Editors</p>
+                    <p class="text-2xl font-bold text-purple-600">12</p>
+                  </div>
+                  <span class="text-2xl">✏️</span>
+                </div>
+              </div>
+              <div class="bg-white p-4 rounded-lg shadow-sm">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm text-gray-600">Articles Reviewed</p>
+                    <p class="text-2xl font-bold text-blue-600">89</p>
+                  </div>
+                  <span class="text-2xl">📋</span>
+                </div>
+              </div>
+              <div class="bg-white p-4 rounded-lg shadow-sm">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm text-gray-600">Pending Reviews</p>
+                    <p class="text-2xl font-bold text-yellow-600">23</p>
+                  </div>
+                  <span class="text-2xl">⏰</span>
+                </div>
+              </div>
+              <div class="bg-white p-4 rounded-lg shadow-sm">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm text-gray-600">Published Today</p>
+                    <p class="text-2xl font-bold text-green-600">15</p>
+                  </div>
+                  <span class="text-2xl">🚀</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Editors List -->
+            <div class="bg-white rounded-lg shadow-sm">
+              <div class="p-6 border-b border-gray-200">
+                <h3 class="text-lg font-semibold">Editorial Team</h3>
+              </div>
+              <div class="divide-y divide-gray-200">
+                <div class="p-6 flex items-center justify-between">
+                  <div class="flex items-center space-x-4">
+                    <div
+                      class="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center"
+                    >
+                      <span class="text-white font-bold">DW</span>
+                    </div>
+                    <div>
+                      <h4 class="font-semibold">David Wilson</h4>
+                      <p class="text-sm text-gray-600">Senior News Editor</p>
+                      <p class="text-xs text-gray-500">News Department</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center space-x-6">
+                    <div class="text-center">
+                      <p class="text-sm font-medium">Articles Reviewed</p>
+                      <p class="text-lg font-bold text-blue-600">34</p>
+                    </div>
+                    <div class="text-center">
+                      <p class="text-sm font-medium">Avg. Review Time</p>
+                      <p class="text-lg font-bold text-green-600">2.3h</p>
+                    </div>
+                    <div class="text-center">
+                      <p class="text-sm font-medium">Status</p>
+                      <span class="status-badge status-active">Active</span>
+                    </div>
+                    <div class="flex space-x-2">
+                      <button
+                        onclick="viewEditorProfile('david.wilson@bbc.com')"
+                        class="bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition-colors"
+                      >
+                        Profile
+                      </button>
+                      <button
+                        onclick="messageUser('david.wilson@bbc.com')"
+                        class="bg-gray-200 text-gray-700 px-3 py-2 rounded text-sm hover:bg-gray-300 transition-colors"
+                      >
+                        Message
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="p-6 flex items-center justify-between">
+                  <div class="flex items-center space-x-4">
+                    <div
+                      class="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center"
+                    >
+                      <span class="text-white font-bold">EM</span>
+                    </div>
+                    <div>
+                      <h4 class="font-semibold">Emma Martinez</h4>
+                      <p class="text-sm text-gray-600">Sports Editor</p>
+                      <p class="text-xs text-gray-500">Sports Department</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center space-x-6">
+                    <div class="text-center">
+                      <p class="text-sm font-medium">Articles Reviewed</p>
+                      <p class="text-lg font-bold text-blue-600">28</p>
+                    </div>
+                    <div class="text-center">
+                      <p class="text-sm font-medium">Avg. Review Time</p>
+                      <p class="text-lg font-bold text-green-600">1.8h</p>
+                    </div>
+                    <div class="text-center">
+                      <p class="text-sm font-medium">Status</p>
+                      <span class="status-badge status-active">Active</span>
+                    </div>
+                    <div class="flex space-x-2">
+                      <button
+                        onclick="viewEditorProfile('emma.martinez@bbc.com')"
+                        class="bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition-colors"
+                      >
+                        Profile
+                      </button>
+                      <button
+                        onclick="messageUser('emma.martinez@bbc.com')"
+                        class="bg-gray-200 text-gray-700 px-3 py-2 rounded text-sm hover:bg-gray-300 transition-colors"
+                      >
+                        Message
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="p-6 flex items-center justify-between">
+                  <div class="flex items-center space-x-4">
+                    <div
+                      class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center"
+                    >
+                      <span class="text-white font-bold">RT</span>
+                    </div>
+                    <div>
+                      <h4 class="font-semibold">Robert Taylor</h4>
+                      <p class="text-sm text-gray-600">Business Editor</p>
+                      <p class="text-xs text-gray-500">Business Department</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center space-x-6">
+                    <div class="text-center">
+                      <p class="text-sm font-medium">Articles Reviewed</p>
+                      <p class="text-lg font-bold text-blue-600">27</p>
+                    </div>
+                    <div class="text-center">
+                      <p class="text-sm font-medium">Avg. Review Time</p>
+                      <p class="text-lg font-bold text-green-600">3.1h</p>
+                    </div>
+                    <div class="text-center">
+                      <p class="text-sm font-medium">Status</p>
+                      <span class="status-badge status-active">Active</span>
+                    </div>
+                    <div class="flex space-x-2">
+                      <button
+                        onclick="viewEditorProfile('robert.taylor@bbc.com')"
+                        class="bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition-colors"
+                      >
+                        Profile
+                      </button>
+                      <button
+                        onclick="messageUser('robert.taylor@bbc.com')"
+                        class="bg-gray-200 text-gray-700 px-3 py-2 rounded text-sm hover:bg-gray-300 transition-colors"
+                      >
+                        Message
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- News Articles Section -->
+          <div id="admin-articles-content" class="admin-section hidden">
+            <div class="flex justify-between items-center mb-6">
+              <h2 class="text-2xl font-bold">News Article Management</h2>
+              <div class="flex space-x-3">
+                <button
+                  onclick="bulkPublish()"
+                  class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Bulk Publish
+                </button>
+                <button
+                  onclick="createArticle()"
+                  class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Create Article
+                </button>
+              </div>
+            </div>
+
+            <!-- Article Filters -->
+            <div class="bg-white p-4 rounded-lg shadow-sm mb-6">
+              <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <input
+                  type="text"
+                  placeholder="Search articles..."
+                  class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <select
+                  class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option>All Categories</option>
+                  <option>News</option>
+                  <option>Sports</option>
+                  <option>Business</option>
+                  <option>Technology</option>
+                  <option>Environment</option>
+                </select>
+                <select
+                  class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option>All Status</option>
+                  <option>Draft</option>
+                  <option>Review</option>
+                  <option>Published</option>
+                  <option>Archived</option>
+                </select>
+                <select
+                  class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option>All Authors</option>
+                  <option>Sarah Johnson</option>
+                  <option>James Brown</option>
+                  <option>Mike Chen</option>
+                </select>
+                <button
+                  class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+
+            <!-- Articles Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div class="article-card bg-white rounded-lg p-6">
+                <div class="flex items-start justify-between mb-4">
+                  <span class="status-badge article-status-review"
+                    >Under Review</span
+                  >
+                  <div class="flex space-x-1">
+                    <button
+                      onclick="editArticle('climate-summit')"
+                      class="text-blue-600 hover:text-blue-800"
+                    >
+                      <svg
+                        class="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+                        ></path>
+                      </svg>
+                    </button>
+                    <button
+                      onclick="deleteArticle('climate-summit')"
+                      class="text-red-600 hover:text-red-800"
+                    >
+                      <svg
+                        class="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fill-rule="evenodd"
+                          d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                          clip-rule="evenodd"
+                        ></path>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <h3 class="font-semibold text-lg mb-2">
+                  Climate summit reaches historic $500bn global agreement
+                </h3>
+                <p class="text-gray-600 text-sm mb-4">
+                  195 nations commit to unprecedented environmental action with
+                  binding targets for carbon reduction...
+                </p>
+                <div
+                  class="flex items-center space-x-2 text-xs text-gray-500 mb-4"
+                >
+                  <span>By Sarah Johnson</span>
+                  <span>•</span>
+                  <span>Environment</span>
+                  <span>•</span>
+                  <span>2 hours ago</span>
+                </div>
+                <div class="flex space-x-2">
+                  <button
+                    onclick="approveArticle('climate-summit')"
+                    class="flex-1 bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition-colors"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onclick="requestRevision('climate-summit')"
+                    class="flex-1 bg-yellow-600 text-white px-3 py-2 rounded text-sm hover:bg-yellow-700 transition-colors"
+                  >
+                    Request Revision
+                  </button>
+                </div>
+              </div>
+
+              <div class="article-card bg-white rounded-lg p-6">
+                <div class="flex items-start justify-between mb-4">
+                  <span class="status-badge article-status-published"
+                    >Published</span
+                  >
+                  <div class="flex space-x-1">
+                    <button
+                      onclick="editArticle('market-surge')"
+                      class="text-blue-600 hover:text-blue-800"
+                    >
+                      <svg
+                        class="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+                        ></path>
+                      </svg>
+                    </button>
+                    <button
+                      onclick="archiveArticle('market-surge')"
+                      class="text-gray-600 hover:text-gray-800"
+                    >
+                      <svg
+                        class="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          d="M4 3a2 2 0 00-2 2v1.816a2 2 0 00.586 1.414l2.828 2.828A2 2 0 007 10.828V15a2 2 0 002 2h2a2 2 0 002-2v-4.172a2 2 0 00-.586-1.414l-2.828-2.828A2 2 0 009 5.816V5a2 2 0 00-2-2H4z"
+                        ></path>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <h3 class="font-semibold text-lg mb-2">
+                  Global markets surge following tech earnings beat
+                </h3>
+                <p class="text-gray-600 text-sm mb-4">
+                  Major technology companies exceed expectations, driving
+                  worldwide market optimism and investor confidence...
+                </p>
+                <div
+                  class="flex items-center space-x-2 text-xs text-gray-500 mb-4"
+                >
+                  <span>By James Brown</span>
+                  <span>•</span>
+                  <span>Business</span>
+                  <span>•</span>
+                  <span>5 hours ago</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <div class="flex space-x-4 text-xs text-gray-500">
+                    <span>👁️ 2.4k views</span>
+                    <span>💬 23 comments</span>
+                    <span>📤 156 shares</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="article-card bg-white rounded-lg p-6">
+                <div class="flex items-start justify-between mb-4">
+                  <span class="status-badge article-status-draft">Draft</span>
+                  <div class="flex space-x-1">
+                    <button
+                      onclick="editArticle('world-cup')"
+                      class="text-blue-600 hover:text-blue-800"
+                    >
+                      <svg
+                        class="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+                        ></path>
+                      </svg>
+                    </button>
+                    <button
+                      onclick="deleteArticle('world-cup')"
+                      class="text-red-600 hover:text-red-800"
+                    >
+                      <svg
+                        class="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fill-rule="evenodd"
+                          d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                          clip-rule="evenodd"
+                        ></path>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <h3 class="font-semibold text-lg mb-2">
+                  World Cup qualifiers: Stunning upsets reshape tournament
+                </h3>
+                <p class="text-gray-600 text-sm mb-4">
+                  Underdog teams defeat established powerhouses in shocking
+                  qualification results that nobody saw coming...
+                </p>
+                <div
+                  class="flex items-center space-x-2 text-xs text-gray-500 mb-4"
+                >
+                  <span>By Mike Chen</span>
+                  <span>•</span>
+                  <span>Sports</span>
+                  <span>•</span>
+                  <span>Draft saved 1 hour ago</span>
+                </div>
+                <div class="flex space-x-2">
+                  <button
+                    onclick="submitForReview('world-cup')"
+                    class="flex-1 bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition-colors"
+                  >
+                    Submit for Review
+                  </button>
+                  <button
+                    onclick="previewArticle('world-cup')"
+                    class="bg-gray-200 text-gray-700 px-3 py-2 rounded text-sm hover:bg-gray-300 transition-colors"
+                  >
+                    Preview
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Messages Section -->
+          <div id="admin-messages-content" class="admin-section hidden">
+            <div class="flex justify-between items-center mb-6">
+              <h2 class="text-2xl font-bold">Message Center</h2>
+              <div class="flex space-x-3">
+                <button
+                  onclick="markAllRead()"
+                  class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Mark All Read
+                </button>
+                <button
+                  onclick="composeMessage()"
+                  class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Compose Message
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <!-- Message List -->
+              <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-sm">
+                  <div class="p-4 border-b border-gray-200">
+                    <h3 class="font-semibold">Messages</h3>
+                  </div>
+                  <div class="divide-y divide-gray-200">
+                    <div
+                      class="message-thread unread p-4 cursor-pointer"
+                      onclick="openMessage('msg1')"
+                    >
+                      <div class="flex items-start space-x-3">
+                        <div
+                          class="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center"
+                        >
+                          <span class="text-white text-sm font-bold">ND</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <div class="flex items-center justify-between">
+                            <p class="text-sm font-medium text-gray-900">
+                              News Director
+                            </p>
+                            <p class="text-xs text-gray-500">2h ago</p>
+                          </div>
+                          <p class="text-sm text-gray-600 truncate">
+                            Urgent: Breaking news coverage protocol update
+                          </p>
+                          <div class="flex items-center mt-1">
+                            <span
+                              class="priority-high w-2 h-2 rounded-full bg-red-500 mr-2"
+                            ></span>
+                            <span class="text-xs text-red-600 font-medium"
+                              >HIGH PRIORITY</span
+                            >
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      class="message-thread p-4 cursor-pointer"
+                      onclick="openMessage('msg2')"
+                    >
+                      <div class="flex items-start space-x-3">
+                        <div
+                          class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center"
+                        >
+                          <span class="text-white text-sm font-bold">SJ</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <div class="flex items-center justify-between">
+                            <p class="text-sm font-medium text-gray-900">
+                              Sarah Johnson
+                            </p>
+                            <p class="text-xs text-gray-500">4h ago</p>
+                          </div>
+                          <p class="text-sm text-gray-600 truncate">
+                            Climate summit article ready for review
+                          </p>
+                          <div class="flex items-center mt-1">
+                            <span
+                              class="priority-medium w-2 h-2 rounded-full bg-yellow-500 mr-2"
+                            ></span>
+                            <span class="text-xs text-yellow-600 font-medium"
+                              >MEDIUM</span
+                            >
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      class="message-thread p-4 cursor-pointer"
+                      onclick="openMessage('msg3')"
+                    >
+                      <div class="flex items-start space-x-3">
+                        <div
+                          class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center"
+                        >
+                          <span class="text-white text-sm font-bold">DW</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <div class="flex items-center justify-between">
+                            <p class="text-sm font-medium text-gray-900">
+                              David Wilson
+                            </p>
+                            <p class="text-xs text-gray-500">1d ago</p>
+                          </div>
+                          <p class="text-sm text-gray-600 truncate">
+                            Weekly editorial meeting notes
+                          </p>
+                          <div class="flex items-center mt-1">
+                            <span
+                              class="priority-low w-2 h-2 rounded-full bg-green-500 mr-2"
+                            ></span>
+                            <span class="text-xs text-green-600 font-medium"
+                              >LOW</span
+                            >
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      class="message-thread unread p-4 cursor-pointer"
+                      onclick="openMessage('msg4')"
+                    >
+                      <div class="flex items-start space-x-3">
+                        <div
+                          class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center"
+                        >
+                          <span class="text-white text-sm font-bold">MC</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <div class="flex items-center justify-between">
+                            <p class="text-sm font-medium text-gray-900">
+                              Mike Chen
+                            </p>
+                            <p class="text-xs text-gray-500">2d ago</p>
+                          </div>
+                          <p class="text-sm text-gray-600 truncate">
+                            Request for technology beat assignment
+                          </p>
+                          <div class="flex items-center mt-1">
+                            <span
+                              class="priority-medium w-2 h-2 rounded-full bg-yellow-500 mr-2"
+                            ></span>
+                            <span class="text-xs text-yellow-600 font-medium"
+                              >MEDIUM</span
+                            >
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Message Content -->
+              <div class="lg:col-span-2">
+                <div
+                  id="message-content"
+                  class="bg-white rounded-lg shadow-sm h-96"
+                >
+                  <div class="p-6 text-center text-gray-500">
+                    <span class="text-4xl mb-4 block">💬</span>
+                    <p>Select a message to view its content</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Analytics Section -->
+          <div id="admin-analytics-content" class="admin-section hidden">
+            <div class="text-center py-20">
+              <div class="loading-spinner mx-auto mb-4"></div>
+              <h2 class="text-2xl font-bold mb-2">Analytics Dashboard</h2>
+              <p class="text-gray-600">
+                Loading comprehensive analytics data...
+              </p>
+            </div>
+          </div>
+
+          <!-- Settings Section -->
+          <div id="admin-settings-content" class="admin-section hidden">
+            <div class="text-center py-20">
+              <div class="loading-spinner mx-auto mb-4"></div>
+              <h2 class="text-2xl font-bold mb-2">System Settings</h2>
+              <p class="text-gray-600">
+                Loading system configuration options...
+              </p>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- User Modal -->
+    <div
+      id="user-modal"
+      class="modal-backdrop fixed inset-0 hidden z-50 flex items-center justify-center p-4"
+    >
+      <div
+        class="modal-content rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+      >
+        <div class="p-6 border-b border-gray-200">
+          <div class="flex justify-between items-center">
+            <h2 class="text-xl font-bold">Add New User</h2>
+            <button
+              onclick="closeUserModal()"
+              class="text-gray-400 hover:text-gray-600 text-2xl"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+        <div class="p-6">
+          <form onsubmit="saveUser(event)" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >First Name</label
+                >
+                <input
+                  type="text"
+                  required
+                  class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >Last Name</label
+                >
+                <input
+                  type="text"
+                  required
+                  class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Email Address</label
+              >
+              <input
+                type="email"
+                required
+                class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >Role</label
+                >
+                <select
+                  required
+                  class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Role</option>
+                  <option value="user">User</option>
+                  <option value="reporter">Reporter</option>
+                  <option value="editor">Editor</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >Department</label
+                >
+                <select
+                  required
+                  class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Department</option>
+                  <option value="news">News</option>
+                  <option value="sports">Sports</option>
+                  <option value="business">Business</option>
+                  <option value="technology">Technology</option>
+                  <option value="environment">Environment</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Temporary Password</label
+              >
+              <input
+                type="password"
+                required
+                class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p class="text-xs text-gray-500 mt-1">
+                User will be required to change password on first login
+              </p>
+            </div>
+
+            <div class="flex space-x-4">
+              <button
+                type="submit"
+                class="btn-primary flex-1 py-3 rounded-lg font-semibold text-white"
+              >
+                Create User
+              </button>
+              <button
+                type="button"
+                onclick="closeUserModal()"
+                class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Message Modal -->
+    <div
+      id="message-modal"
+      class="modal-backdrop fixed inset-0 hidden z-50 flex items-center justify-center p-4"
+    >
+      <div
+        class="modal-content rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+      >
+        <div class="p-6 border-b border-gray-200">
+          <div class="flex justify-between items-center">
+            <h2 class="text-xl font-bold">Compose Message</h2>
+            <button
+              onclick="closeMessageModal()"
+              class="text-gray-400 hover:text-gray-600 text-2xl"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+        <div class="p-6">
+          <form onsubmit="sendMessage(event)" class="space-y-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >To</label
+              >
+              <select
+                required
+                class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select Recipient</option>
+                <option value="all-staff">All Staff</option>
+                <option value="all-reporters">All Reporters</option>
+                <option value="all-editors">All Editors</option>
+                <option value="david.wilson@bbc.com">
+                  David Wilson (Editor)
+                </option>
+                <option value="sarah.johnson@bbc.com">
+                  Sarah Johnson (Reporter)
+                </option>
+                <option value="mike.chen@bbc.com">Mike Chen (Reporter)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Priority</label
+              >
+              <select
+                required
+                class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Subject</label
+              >
+              <input
+                type="text"
+                required
+                class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter message subject"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Message</label
+              >
+              <textarea
+                required
+                rows="6"
+                class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Type your message here..."
+              ></textarea>
+            </div>
+
+            <div class="flex space-x-4">
+              <button
+                type="submit"
+                class="btn-primary flex-1 py-3 rounded-lg font-semibold text-white"
+              >
+                Send Message
+              </button>
+              <button
+                type="button"
+                onclick="closeMessageModal()"
+                class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Global state
+      let currentAdminSection = "dashboard";
+      let selectedMessage = null;
+
+      // Initialize admin dashboard
+      document.addEventListener("DOMContentLoaded", function () {
+        showAdminSection("dashboard");
+      });
+
+      // Toast notification system
+      function showNotification(message, type = "info") {
+        const toast = document.createElement("div");
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white/80 hover:text-white">×</button>
+                </div>
+            `;
+
+        document.body.appendChild(toast);
+
+        // Show toast
+        setTimeout(() => toast.classList.add("show"), 100);
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+          toast.classList.remove("show");
+          setTimeout(() => toast.remove(), 300);
+        }, 5000);
+      }
+
+      // Admin section management
+      function showAdminSection(section) {
+        // Update navigation
+        document.querySelectorAll(".admin-nav-item").forEach((item) => {
+          item.classList.remove("active");
+        });
+        event.target.classList.add("active");
+
+        // Hide all sections
+        document.querySelectorAll(".admin-section").forEach((section) => {
+          section.classList.add("hidden");
+        });
+
+        // Show selected section
+        document
+          .getElementById(`admin-${section}-content`)
+          .classList.remove("hidden");
+
+        // Update title
+        const titles = {
+          dashboard: "Dashboard Overview",
+          users: "User Management",
+          reporters: "Reporter Management",
+          editors: "Editor Management",
+          articles: "News Article Management",
+          messages: "Message Center",
+          analytics: "Analytics Dashboard",
+          settings: "System Settings",
+        };
+
+        document.getElementById("admin-title").textContent =
+          titles[section] || "Admin Panel";
+        currentAdminSection = section;
+      }
+
+      // Mobile sidebar toggle
+      function toggleAdminSidebar() {
+        const sidebar = document.getElementById("admin-sidebar");
+        const overlay = document.getElementById("mobile-admin-overlay");
+
+        sidebar.classList.toggle("show");
+        overlay.classList.toggle("hidden");
+      }
+
+      // User management functions
+      function openUserModal() {
+        document.getElementById("user-modal").classList.remove("hidden");
+        document.body.style.overflow = "hidden";
+      }
+
+      function closeUserModal() {
+        document.getElementById("user-modal").classList.add("hidden");
+        document.body.style.overflow = "auto";
+      }
+
+      function saveUser(event) {
+        event.preventDefault();
+        showNotification("User created successfully!", "success");
+        closeUserModal();
+      }
+
+      function editUser(email) {
+        showNotification(`Opening edit form for ${email}`, "info");
+      }
+
+      function suspendUser(email) {
+        if (confirm(`Are you sure you want to suspend ${email}?`)) {
+          showNotification(`User ${email} has been suspended`, "warning");
+        }
+      }
+
+      function deleteUser(email) {
+        if (
+          confirm(
+            `Are you sure you want to delete ${email}? This action cannot be undone.`,
+          )
+        ) {
+          showNotification(`User ${email} has been deleted`, "error");
+        }
+      }
+
+      function approveUser(email) {
+        showNotification(
+          `User ${email} has been approved and activated`,
+          "success",
+        );
+      }
+
+      function messageUser(email) {
+        openMessageModal();
+        // Pre-fill recipient
+        const recipientSelect = document.querySelector("#message-modal select");
+        recipientSelect.value = email;
+      }
+
+      function exportUsers() {
+        showNotification("Exporting user data...", "info");
+        setTimeout(() => {
+          showNotification("User data exported successfully!", "success");
+        }, 2000);
+      }
+
+      // Reporter management functions
+      function openReporterModal() {
+        openUserModal(); // Reuse user modal
+      }
+
+      function assignStory() {
+        showNotification("Opening story assignment interface...", "info");
+      }
+
+      function viewReporterProfile(email) {
+        showNotification(`Opening profile for ${email}`, "info");
+      }
+
+      function approveReporter(email) {
+        showNotification(
+          `Reporter ${email} has been approved and activated`,
+          "success",
+        );
+      }
+
+      // Editor management functions
+      function openEditorModal() {
+        openUserModal(); // Reuse user modal
+      }
+
+      function viewEditorialCalendar() {
+        showNotification("Opening editorial calendar...", "info");
+      }
+
+      function viewEditorProfile(email) {
+        showNotification(`Opening editor profile for ${email}`, "info");
+      }
+
+      // Article management functions
+      function createArticle() {
+        showNotification("Opening article editor...", "info");
+      }
+
+      function editArticle(articleId) {
+        showNotification(`Opening editor for article: ${articleId}`, "info");
+      }
+
+      function deleteArticle(articleId) {
+        if (confirm("Are you sure you want to delete this article?")) {
+          showNotification(`Article ${articleId} has been deleted`, "error");
+        }
+      }
+
+      function approveArticle(articleId) {
+        showNotification(
+          `Article ${articleId} has been approved and published`,
+          "success",
+        );
+      }
+
+      function requestRevision(articleId) {
+        showNotification(
+          `Revision requested for article: ${articleId}`,
+          "warning",
+        );
+      }
+
+      function submitForReview(articleId) {
+        showNotification(
+          `Article ${articleId} submitted for editorial review`,
+          "info",
+        );
+      }
+
+      function previewArticle(articleId) {
+        showNotification(`Opening preview for article: ${articleId}`, "info");
+      }
+
+      function archiveArticle(articleId) {
+        showNotification(`Article ${articleId} has been archived`, "info");
+      }
+
+      function bulkPublish() {
+        showNotification("Opening bulk publish interface...", "info");
+      }
+
+      // Message system functions
+      function openMessageModal() {
+        document.getElementById("message-modal").classList.remove("hidden");
+        document.body.style.overflow = "hidden";
+      }
+
+      function closeMessageModal() {
+        document.getElementById("message-modal").classList.add("hidden");
+        document.body.style.overflow = "auto";
+      }
+
+      function sendMessage(event) {
+        event.preventDefault();
+        showNotification("Message sent successfully!", "success");
+        closeMessageModal();
+      }
+
+      function openMessage(messageId) {
+        const messageContent = document.getElementById("message-content");
+
+        const messages = {
+          msg1: {
+            from: "News Director",
+            subject: "Urgent: Breaking news coverage protocol update",
+            time: "2 hours ago",
+            priority: "high",
+            content: `
+                        <div class="p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center">
+                                        <span class="text-white font-bold">ND</span>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold">News Director</h3>
+                                        <p class="text-sm text-gray-500">news.director@bbc.com</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm text-gray-500">2 hours ago</p>
+                                    <span class="inline-block px-2 py-1 bg-red-100 text-red-600 text-xs rounded-full font-medium">HIGH PRIORITY</span>
+                                </div>
+                            </div>
+                            <h2 class="text-lg font-semibold mb-4">Urgent: Breaking news coverage protocol update</h2>
+                            <div class="prose max-w-none">
+                                <p>Dear Team,</p>
+                                <p>Following recent events, we are implementing updated protocols for breaking news coverage effective immediately:</p>
+                                <ul>
+                                    <li>All breaking news must be verified by at least two independent sources</li>
+                                    <li>Senior editors must approve all breaking news alerts within 15 minutes</li>
+                                    <li>Social media posts require additional fact-checking before publication</li>
+                                </ul>
+                                <p>Please ensure all staff in your departments are briefed on these changes by end of day.</p>
+                                <p>Best regards,<br>News Director</p>
+                            </div>
+                            <div class="mt-6 flex space-x-3">
+                                <button onclick="replyToMessage('msg1')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">Reply</button>
+                                <button onclick="forwardMessage('msg1')" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">Forward</button>
+                                <button onclick="markAsRead('msg1')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">Mark as Read</button>
+                            </div>
+                        </div>
+                    `,
+          },
+          msg2: {
+            from: "Sarah Johnson",
+            subject: "Climate summit article ready for review",
+            time: "4 hours ago",
+            priority: "medium",
+            content: `
+                        <div class="p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                                        <span class="text-white font-bold">SJ</span>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold">Sarah Johnson</h3>
+                                        <p class="text-sm text-gray-500">sarah.johnson@bbc.com</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm text-gray-500">4 hours ago</p>
+                                    <span class="inline-block px-2 py-1 bg-yellow-100 text-yellow-600 text-xs rounded-full font-medium">MEDIUM</span>
+                                </div>
+                            </div>
+                            <h2 class="text-lg font-semibold mb-4">Climate summit article ready for review</h2>
+                            <div class="prose max-w-none">
+                                <p>Hi Admin,</p>
+                                <p>I've completed the article on the climate summit agreement and it's ready for editorial review. The piece covers:</p>
+                                <ul>
+                                    <li>Key points of the $500bn agreement</li>
+                                    <li>Reactions from major world leaders</li>
+                                    <li>Environmental impact projections</li>
+                                    <li>Timeline for implementation</li>
+                                </ul>
+                                <p>The article is approximately 1,200 words and includes quotes from 5 different sources. I've also prepared accompanying infographics.</p>
+                                <p>Please let me know if you need any revisions.</p>
+                                <p>Best,<br>Sarah</p>
+                            </div>
+                            <div class="mt-6 flex space-x-3">
+                                <button onclick="replyToMessage('msg2')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">Reply</button>
+                                <button onclick="approveArticle('climate-summit')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">Approve Article</button>
+                                <button onclick="markAsRead('msg2')" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">Mark as Read</button>
+                            </div>
+                        </div>
+                    `,
+          },
+        };
+
+        if (messages[messageId]) {
+          messageContent.innerHTML = messages[messageId].content;
+          selectedMessage = messageId;
+        }
+      }
+
+      function replyToMessage(messageId) {
+        openMessageModal();
+        showNotification(`Composing reply to message ${messageId}`, "info");
+      }
+
+      function forwardMessage(messageId) {
+        openMessageModal();
+        showNotification(`Forwarding message ${messageId}`, "info");
+      }
+
+      function markAsRead(messageId) {
+        showNotification("Message marked as read", "success");
+        // Update UI to show message as read
+        const messageElement = document.querySelector(
+          `[onclick="openMessage('${messageId}')"]`,
+        );
+        if (messageElement) {
+          messageElement.classList.remove("unread");
+        }
+      }
+
+      function markAllRead() {
+        showNotification("All messages marked as read", "success");
+        document.querySelectorAll(".message-thread").forEach((thread) => {
+          thread.classList.remove("unread");
+        });
+      }
+
+      function composeMessage() {
+        openMessageModal();
+      }
+
+      // Notification functions
+      function toggleNotifications() {
+        showNotification("Opening notifications panel...", "info");
+      }
+
+      // Logout function
+      function logout() {
+        if (confirm("Are you sure you want to sign out?")) {
+          showNotification("Signing out...", "info");
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        }
+      }
+
+      // Keyboard shortcuts
+      document.addEventListener("keydown", function (e) {
+        // Ctrl/Cmd + M for new message
+        if ((e.ctrlKey || e.metaKey) && e.key === "m") {
+          e.preventDefault();
+          openMessageModal();
+        }
+
+        // Ctrl/Cmd + U for new user
+        if ((e.ctrlKey || e.metaKey) && e.key === "u") {
+          e.preventDefault();
+          openUserModal();
+        }
+
+        // Escape to close modals
+        if (e.key === "Escape") {
+          closeUserModal();
+          closeMessageModal();
+        }
+      });
+
+      // Auto-refresh data every 30 seconds
+      setInterval(() => {
+        // Simulate data refresh
+        console.log("Refreshing dashboard data...");
+      }, 30000);
+
+      // Initialize tooltips and other UI enhancements
+      document.addEventListener("DOMContentLoaded", function () {
+        // Add hover effects and animations
+        const cards = document.querySelectorAll(".stat-card, .article-card");
+        cards.forEach((card) => {
+          card.addEventListener("mouseenter", function () {
+            this.style.transform = "translateY(-4px)";
+          });
+          card.addEventListener("mouseleave", function () {
+            this.style.transform = "translateY(0)";
+          });
+        });
+      });
+    </script>
+
+    <script>
+      (function () {
+        function c() {
+          var b = a.contentDocument || a.contentWindow.document;
+          if (b) {
+            var d = b.createElement("script");
+            d.innerHTML =
+              "window.__CF$cv$params={r:'97ab119815415f54',t:'MTc1NzEzMTMyNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";
+            b.getElementsByTagName("head")[0].appendChild(d);
+          }
+        }
+        if (document.body) {
+          var a = document.createElement("iframe");
+          a.height = 1;
+          a.width = 1;
+          a.style.position = "absolute";
+          a.style.top = 0;
+          a.style.left = 0;
+          a.style.border = "none";
+          a.style.visibility = "hidden";
+          document.body.appendChild(a);
+          if ("loading" !== document.readyState) c();
+          else if (window.addEventListener)
+            document.addEventListener("DOMContentLoaded", c);
+          else {
+            var e = document.onreadystatechange || function () {};
+            document.onreadystatechange = function (b) {
+              e(b);
+              "loading" !== document.readyState &&
+                ((document.onreadystatechange = e), c());
+            };
+          }
+        }
+      })();
+    </script>
+  </body>
+</html>
