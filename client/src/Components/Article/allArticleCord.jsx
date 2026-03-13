@@ -56,7 +56,7 @@ export function SecondaryStoryCord({ datas = [] }) {
           category,
           media,
           url,
-          id,
+          _id,
         } = story;
 
         const coverImage = media?.find((v) => v.type === "cover");
@@ -64,7 +64,7 @@ export function SecondaryStoryCord({ datas = [] }) {
         return (
           <CustomLink
             state={story}
-            key={id + i}
+            key={_id + i}
             to={url ?? "/Details"}
             rel="noopener noreferrer"
           >
@@ -121,7 +121,7 @@ export function TopStoryCord({ name, datas = [] }) {
             media,
             description,
             url,
-            id,
+            _id,
           } = story;
 
           const coverImage = media?.find((v) => v.type === "cover");
@@ -129,7 +129,7 @@ export function TopStoryCord({ name, datas = [] }) {
           return (
             <CustomLink
               state={story}
-              key={id + i}
+              key={_id + i}
               to={url ?? "/Details"}
               rel="noopener noreferrer"
             >
