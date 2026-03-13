@@ -23,7 +23,7 @@ export default function Home() {
   const { pathname } = useLocation();
   const oneCallApi = useRef(true);
   const { res, loading, error, refetch } = useFetch(
-    `${API_URL}/Articles${pathname}`,
+    `${API_URL}/Articles/?${"pathname"}`,
   );
   useEffect(() => {
     if (oneCallApi.current) {
