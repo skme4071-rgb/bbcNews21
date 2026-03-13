@@ -7,12 +7,13 @@ import {
   FaEnvelope,
   FaChartLine,
   FaCog,
-  FaUserShield
+  FaUserShield,
 } from "react-icons/fa";
 
 
-export const  menuItems = [
-  { name: "Dashboard", icon: FaTachometerAlt, path: "/dashboard" },
+
+export const menuItems = [
+  { name: "Dashboard", icon: FaTachometerAlt, path: "/Dashboard" },
 
   { name: "User Management", icon: FaUsers, badge: 247, color: "bg-blue-500", path: "Users" },
 
@@ -20,7 +21,7 @@ export const  menuItems = [
 
   { name: "Editors", icon: FaEdit, badge: 12, color: "bg-yellow-500", path: "Editors" },
 
-  { name: "News Articles", icon: FaNewspaper, badge: 156, color: "bg-purple-500", path: "Analytics" },
+  { name: "News Articles", icon: FaNewspaper, badge: 156, color: "bg-purple-500", path: "Articles" },
 
   { name: "Messages", icon: FaEnvelope, badge: 8, color: "bg-red-500", path: "Messages" },
 
@@ -28,5 +29,14 @@ export const  menuItems = [
 
   { name: "Settings", icon: FaCog, path: "Settings" },
 
-//   { name: "Admin User", icon: FaUserShield, path: "/admin" }
+  //   { name: "Admin User", icon: FaUserShield, path: "/admin" }
 ];
+
+
+export function Logout() {
+  alert("yuytu")
+}
+
+
+
+

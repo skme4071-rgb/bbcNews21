@@ -1,32 +1,32 @@
-import { menuItems } from "./config";
+import { menuItems, Logout } from "./config";
 import { CustomNavLink } from "./../utilities/Element";
+import { useToggle } from "./../context/ToggleContext";
+
+
 
 
 const NavItemsComponent = ({ menuItems = [] }) => {
   return (
-    <nav classNameName="space-y-2">
+    <nav className="space-y-2">
       {menuItems.map((item, i) => {
 
         const Icon = item.icon;
 
         return (
-          <CustomNavLink to={item.path}   key={i} >
-          <button
-
-            className="admin-nav-item w-full text-left px-4 py-3 text-gray-300 hover:text-white flex items-center space-x-3"
-          >
-            <span>
-              <Icon />
-            </span>
-
-            <span>{item.name}</span>
-
-            {item.badge && (
-              <span className={`ml-auto ${item.color} text-white text-xs px-2 py-1 rounded-full`}>
-                {item.badge}
+          <CustomNavLink to={item.path} key={i} end={item.path === "/Dashboard"}>
+            <button className="admin-nav-item w-full text-left px-4 py-3 text-gray-300 hover:text-white flex items-center space-x-3" >
+              <span>
+                <Icon />
               </span>
-            )}
-          </button>
+
+              <span>{item.name}</span>
+
+              {item.badge && (
+                <span className={`ml-auto ${item.color} text-white text-xs px-2 py-1 rounded-full`}>
+                  {item.badge}
+                </span>
+              )}
+            </button>
           </CustomNavLink>
 
         );
@@ -43,10 +43,14 @@ const NavItemsComponent = ({ menuItems = [] }) => {
 
 export default function Sidebar() {
 
+  const { toggle } = useToggle()
+
+
+  
+  
   return (
     <div
-      id="admin-sidebar"
-      className="admin-sidebar fixed left-0 top-0 h-full w-64 z-50 overflow-y-auto"
+      className={`${toggle.isSidebarActive ? "show" : "hidden"}  admin-sidebar fixed left-0 top-0 h-full w-64 z-50 overflow-y-auto`}
     >
       <div className="p-6">
         <div className="flex items-center space-x-3 mb-8">
@@ -76,7 +80,9 @@ export default function Sidebar() {
             </div>
           </div>
 
-          <button className="w-full text-left px-4 py-3 text-gray-400 hover:text-white flex items-center space-x-3 transition-colors">
+          <button
+            onClick={Logout}
+            className="w-full text-left px-4 py-3 text-gray-400 hover:text-white flex items-center space-x-3 transition-colors">
             <span>🚪</span>
             <span>Sign Out</span>
           </button>

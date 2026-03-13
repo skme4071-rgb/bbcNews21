@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 
 
+
 export function useFetch(url) {
     const [state, setState] = useState({
         res: null,
@@ -37,11 +38,12 @@ export function useFetch(url) {
                 const text = await response.text();
                 const result = text ? JSON.parse(text) : null;
 
-                if (!response.ok) {
-                    const error = new Error(result?.message || "Request failed");
-                    error.status = response.status;
-                    throw error;
-                }
+                // if (!response.ok) {
+                //     const error = new Error(result?.message || "Request failed");
+                //     error.status = response.status;
+                //     throw error;
+
+                // }
 
                 setState(v => ({ ...v, res: result }));
                 return result;

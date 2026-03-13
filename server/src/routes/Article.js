@@ -27,9 +27,9 @@ router.use(LoginCheck, accessRole(["admin", "editor"]));
 router.post(
     "/",
     createUploaderfields([
-        { name: "newsImage", maxCount: 1, accept: "image", size: 10 * 1024 * 1024 },
-        { name: "newsVideo", maxCount: 1, accept: "video", size: 100 * 1024 * 1024 },
-        { name: "newsAudio", maxCount: 1, accept: "audio", size: 10 * 1024 * 1024 }
+        { name: "image", maxCount: 1, accept: "image", size: 10 * 1024 * 1024 },
+        { name: "video", maxCount: 1, accept: "video", size: 100 * 1024 * 1024 },
+        { name: "audio", maxCount: 1, accept: "audio", size: 10 * 1024 * 1024 }
     ]),
     Create
 );

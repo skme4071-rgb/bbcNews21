@@ -47,11 +47,9 @@ export const newsSchema = new mongoose.Schema(
     description: { type: String, trim: true, maxlength: 500 },
     summary: { type: String, trim: true, maxlength: 500 },
 
-    author: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
 
+
+    author: { type: String, required: true },
     category: { type: String, required: true },
 
     source: {
@@ -63,7 +61,7 @@ export const newsSchema = new mongoose.Schema(
     media: [
       {
         type: mediaSchema,
-        required: true,
+
       }
     ],
 

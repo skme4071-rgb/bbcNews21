@@ -32,6 +32,7 @@ export const createUploaderArray = (
     return (req, res, next) => {
 
 
+
         const fileFilter = (req, file, cb) => {
             const mime = file.mimetype;
             const validTypes = {
@@ -61,8 +62,6 @@ export const createUploaderArray = (
         });
     };
 };
-
-
 
 export const createUploaderfields = (
     fields = []
@@ -133,7 +132,7 @@ export const createUploaderfields = (
 
 
 // 🔥 F ile cleanup if uploaded
-export const fileCleanup = async (req) => {
+export const fileCleanupArray = async (req) => {
     if (!req.files || req.files.length === 0) return;
 
     for (const file of req.files) {
@@ -144,6 +143,27 @@ export const fileCleanup = async (req) => {
     }
 
     return
+};
+
+
+export const fileCleanupFields = async (req) => {
+
+    if (!req.files) return;
+
+    const files = Object.keys(req.files).flatMap((key) => req.files[key]);
+
+    for (const file of files) {
+
+        const filePath = path.join(uploadDir, file.filename);
+
+        try {
+            await fsPromises.unlink(filePath);
+        } catch (err) {
+            console.log("Failed to delete file:", filePath, err?.message || "");
+        }
+
+    }
+
 };
 
 

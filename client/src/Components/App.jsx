@@ -5,13 +5,6 @@ import "./../style/Tailwind.css";
 import "./../style/App.css";
 
 
-import { Dashboard_Leyout } from "./Dashboard/Leyout";
-import Index from "./../Components/Dashboard/pages/index";
-import Editor from "./../Components/Dashboard/pages/Editor";
-import Workflow from "./../Components/Dashboard/pages/workflow";
-import Analytics from "./../Components/Dashboard/pages/Analytics";
-
-
 
 
 import { AppLayout } from "./Leyout";
@@ -40,6 +33,7 @@ export default function App() {
       < AuthProvider >
         <IsLoginCheck >
           <Routes>
+
             <Route element={<AppLayout />}>
               <Route index element={<Home />} />
               <Route path="profile" element={<Profile />} />
@@ -55,18 +49,6 @@ export default function App() {
               <Route path="live" element={<Live />} />
             </Route>
 
-
-            <Route path="dashboard" element={<Dashboard_Leyout />}>
-              <Route index element={<Index />} />
-              <Route path="SmartEditor" element={<Editor />} />
-              <Route path="Workflow" element={<Workflow />} />
-              <Route path="Workflow" element={<Workflow />} />
-              <Route path="Analytics" element={<Analytics />} />
-            </Route>
-
-            <Route path="dashboard/Auth" >
-
-            </Route>
 
             <Route path="*" element={<NotFound />} />
           </Routes>

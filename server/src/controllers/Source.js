@@ -5,7 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 import { Source, User } from "./../Models/Model.js";
-import { fileCleanup } from "./../Middleware/multer.js";
+import { fileCleanupArray } from "./../Middleware/multer.js";
 
 
 export const Create = async (req, res, next) => {
@@ -16,6 +16,9 @@ export const Create = async (req, res, next) => {
         const { role, id } = req.user;
         const { url, type, name, purpose } = req.body;
         const file = req.files?.[0];
+
+
+
 
         if (!url || !type || !name || !purpose || !file) {
             throw createError(400, "All fields are required");
@@ -58,7 +61,7 @@ export const Create = async (req, res, next) => {
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        await fileCleanup(req)
+        await fileCleanupArray(req)
         return next(error);
     }
 };

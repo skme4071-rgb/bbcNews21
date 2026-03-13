@@ -116,10 +116,10 @@ export function CustomNavLink({
             end={end}
             className={({ isActive }) => {
                 // Base class
-                const baseClass = `flex items-center space-x-3 transition-colors ${className}`;
+                const baseClass = `flex capitalize items-center rounded-lg  space-x-3 transition-colors ${className}`;
                 // Active / inactive
                 const activeClass = isActive
-                    ? "text-blue-600 font-semibold"
+                    ? "font-semibold bg-[#3b82f6]"
                     : "text-gray-600";
 
                 // Optional custom active function
@@ -252,7 +252,7 @@ export const TextareaAutoResize = ({
             }}
             placeholder={placeholder}
             className={`w-full resize-none outline-none  overflow-hidden ${className}`}
-            rows={1}
+            
         />
     );
 };
@@ -262,6 +262,7 @@ export const CRUDbutton = ({
     label,
     color = "green",
     iconOnly = false,
+    className,
     ...rest
 }) => {
     const colors = {
@@ -274,7 +275,7 @@ export const CRUDbutton = ({
     return (
         <button
             {...rest}
-            className={`w-full h-8 ${colors[color]} rounded flex items-center justify-center gap-2 text-white font-semibold text-sm transition`}
+            className={`w-full h-8 ${colors[color]} ${className} rounded flex items-center justify-center gap-2 text-white font-semibold text-sm transition`}
         >
             {Icon && <Icon size={18} />}
             {!iconOnly && label}

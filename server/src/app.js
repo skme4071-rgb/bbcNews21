@@ -74,7 +74,7 @@ app.use("/Auth/User", Auth);
 app.use("/Comments", Comment);
 app.use("/Likes", Like);
 app.use("/Share", Share);
-app.use("/Articles", Article);
+app.use("/Article", Article);
 app.use("/Media", Media);
 app.use("/Source", Source);
 

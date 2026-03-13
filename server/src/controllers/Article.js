@@ -1,7 +1,7 @@
-// import mongoose from "mongoose";
-// import createError from "http-errors";
-// import { Source, User, News } from "./../Models/Model.js";
-// import { fileCleanup } from "./../Middleware/multer.js";
+import mongoose from "mongoose";
+import createError from "http-errors";
+import { Source, User, News } from "./../Models/Model.js";
+import { fileCleanupFields } from "./../Middleware/multer.js";
 
 
 // export const Create = async (req, res, next) => {
@@ -14,37 +14,34 @@
 
 //     try {
 //         const { role, id } = req.user;
-//         const { url, type, name, purpose } = req.body;
+//         const { title, description, content, tags, category, sourceType, summary } = req.body;
+
 //         const file = req.files?.[0];
 
-//         if (!url || !type || !name || !purpose || !file) {
-//             throw createError(400, "All fields are required");
-//         }
+//         // if (!url || !type || !name || !file) {
+//         //     throw createError(400, "All fields are required");
+//         // }
 
-//         const isExists = await Source.findOne({ type }).session(session);
-//         if (isExists) {
-//             throw createError(409, "Source already exists");
-//         }
+//         // const isExists = await News.findOne({ type }).session(session);
+//         // if (isExists) {
+//         //     throw createError(409, "Source already exists");
+//         // }
 
 //         const fileUrl = `${process.env.BASE_URL}/upload/${file.filename}`;
 
-//         const source = await Source.create([{
+//         const news = await News.create([{
 //             role,
 //             createdBy: id,
-//             name,
-//             type,
-//             url,
-//             urlTologo: fileUrl,
-//             media: {
+//             title, description, content, tags, category, sourceType, summary,
+//             media: [{
 //                 filename: file.filename,
 //                 originalname: file.originalname,
 //                 mimetype: file.mimetype,
 //                 size: file.size,
-//                 purpose,
 //                 type: "image",
 //                 url: fileUrl,
 //                 createdBy: id,
-//             },
+//             }],
 //         }], { session });
 
 //         await session.commitTransaction();
@@ -52,7 +49,7 @@
 
 //         return res.status(201).json({
 //             success: true,
-//             source: source[0],
+//             news: sews[0],
 //         });
 
 //     } catch (error) {
@@ -175,85 +172,78 @@ export const Delete = async (req, res, next) => {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import News from "../Models/newsSchema.js";
-// import { Source } from "../Models/models.js";
-
 export const Create = async (req, res) => {
-    //   try {
 
-    //     const { id } = req.user;
-    //     const {
-    //       title,
-    //       content,
-    //       description,
-    //       summary,
-    //       author,
-    //       category,
-    //       sourceType,
-    //       media,
-    //       tags,
-    //       state,
-    //       publishedAt,
-    //     } = req.body;
+    try {
+
+        const { id, role } = req.user;
+        const files = req.files || {};
+
+        const {
+            title,
+            content,
+            description,
+            summary,
+            author,
+            category,
+            sourceType,
+            tags
+        } = req.body;
+
+        const source = await Source.findOne({ type: sourceType });
+
+        if (!source) {
+            throw createError(404, "Source type not found");
+        }
+
+        // MEDIA PROCESS
+        const media = Object.keys(files).flatMap((key) =>
+            files[key].map((file) => ({
+                filename: file.filename,
+                originalname: file.originalname,
+                mimetype: file.mimetype,
+                size: file.size,
+                type: key,
+                url: `${process.env.BASE_URL}/upload/${file.filename}`,
+                createdBy: id
+            }))
+        );
+
+        const article = await News.create({
+            title,
+            content,
+            description,
+            summary,
+            author,
+            role,
+            category,
+            source: source._id,
+            media,
+            state: "draft",
+            tags: tags ? tags.split(",") : [],
+            createdBy: id
+        });
 
 
 
-    //     const source = await Source.findOne({ type: sourceType });
-    //     if (!source) throw createError(404, "source Type not funt");
+        res.status(201).json({
+            success: true,
+            message: "Article created successfully",
+            data: article
+        });
+
+    } catch (error) {
 
 
 
-    //     const article = await News.create({
-    //       title,
-    //       content,
-    //       description,
-    //       summary,
-    //       author,
-    //       category,
-    //       source: source._id,
-    //       media: media || [],
-    //       tags: tags || [],
-    //       state: state || "draft",
-    //       publishedAt,
-    //       createdBy: req.user.id,
-    //     });
+        await fileCleanupFields(req);
 
-
-
-
-
-    //     res.status(201).json({
-    //       message: "Article created successfully",
-    //       data: article,
-    //     });
-
-    //   } catch (error) {
-
-    //     res.status(500).json({
-    //       message: "Article creation failed",
-    //       error: error.message,
-    //     });
-    //   }
+        res.status(500).json({
+            success: false,
+            message: "Article creation failed",
+            error: error.message
+        });
+    }
 };
 
 

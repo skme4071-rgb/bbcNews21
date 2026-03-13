@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { FaImage, FaVideo, FaTimes, FaMusic, FaPlus, FaEdit, FaTrash, FaTasks } from "react-icons/fa";
+import {
+    FaImage, FaVideo, FaTimes, FaMusic,
+    FaPlus, FaEdit, FaTrash, FaTasks,
+} from "react-icons/fa";
 
 import { CustomNotification } from "./Element";
 import { useFetch } from "./../hooks/CommonHooks";
@@ -7,96 +10,41 @@ import { useFetch } from "./../hooks/CommonHooks";
 
 
 
-export const UploadsFile = ({
-    controlsPreview = null,
-    label = null,
-    icon = null,
-    style = "h-20 w-full",
-    accept = "image",
-    purpose = "gallery",
-    fetch = { method: "GET", url: "" },
-}) => {
-    const [preview, setPreview] = useState(null);
+
+export function FilePreviewAndInputObjact(fileCollBack) {
+
+
     const localPreviewRef = useRef(null);
-    const called = useRef(false);
 
-    const { refetch, loading, error } = useFetch(fetch.url);
+    const [prev, setPrev] = useState(null)
 
-    /* ---------------- helpers ---------------- */
-    const isImage = accept.startsWith("image");
-    const isVideo = accept.startsWith("video");
-    const isAudio = accept.startsWith("audio");
-
-    const IconMap = {
-        image: FaImage,
-        video: FaVideo,
-        audio: FaMusic,
-        create: FaPlus,
-        edit: FaEdit,
-        delete: FaTrash,
-        queue: FaTasks
-    };
-    const IconComponent = IconMap[icon || accept];
-
-    /* ---------------- GET preview ---------------- */
-    useEffect(() => {
-        if (
-            fetch.method === "GET" &&
-            fetch.url &&
-            !called.current
-        ) {
-            called.current = true;
-            setPreview(fetch.url);
+    const previewClear = () => {
+        if (localPreviewRef.current) {
+            URL.revokeObjectURL(localPreviewRef.current);
+            localPreviewRef.current = null;
         }
-    }, [fetch.method, fetch.url]);
 
-    /* ---------------- POST upload ---------------- */
-    const uploadToServer = async (file) => {
-
-
-        if (fetch.method !== "POST") return;
-
-        try {
-
-
-
-
-            const formData = new FormData();
-            formData.append("file", file);
-            formData.append("purpose", purpose);
-            const data = await refetch({
-                method: "POST",
-                body: formData,
-            });
-
-            if (data?.url) {
-                setPreview(data.url)
-                typeof controlsPreview === "function" && controlsPreview(false, data.url)
-            };
-        } catch {
-            setPreview(null);
-        }
+        setPrev(null)
     };
 
-    /* ---------------- file change ---------------- */
-    const handleFileChange = (e) => {
+
+    const handleFile = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // cleanup old preview
         if (localPreviewRef.current) {
             URL.revokeObjectURL(localPreviewRef.current);
         }
 
-        const previewUrl = URL.createObjectURL(file);
-        localPreviewRef.current = previewUrl;
-        setPreview(previewUrl);
-        uploadToServer(file);
-        typeof controlsPreview === "function" && controlsPreview(true, previewUrl)
+        const url = URL.createObjectURL(file);
+        localPreviewRef.current = url;
 
+        setPrev(url)
+        fileCollBack?.(file);
     };
 
-    /* ---------------- cleanup ---------------- */
+
+
     useEffect(() => {
         return () => {
             if (localPreviewRef.current) {
@@ -106,164 +54,338 @@ export const UploadsFile = ({
     }, []);
 
 
-    /* ---------------- UI ---------------- */
-    const DefaultPreview = () => (
-        <>
-            {!loading && !preview && (
-                <div className="flex flex-col items-center gap-2">
-                    {IconComponent && <IconComponent />}
-                    {label && (
-                        <span className="text-xs text-gray-600">
-                            {label}
-                        </span>
-                    )}
-                </div>
-            )}
+    const FileInput = ({
+        className,
+        accept = "image",
+        children,
+        icon: Icon,
+        ...rest
+    }) => {
 
 
-            {preview && isImage && (
-                <span className="flex  items-center justify-center">
-                    <img
-                        src={preview}
-                        className="w-full h-full "
-                        alt="Preview"
-                    />
+        return (
+            <label
+                {...rest}
+                className={`relative inset-0 hover:bg-gray-200 z-50 flex items-center justify-center cursor-pointer ${className}`}
+            >
+                <span className="absolute">
+                    {children ?? (Icon && <Icon />)}
                 </span>
-
-
-            )}
-
-            {preview && isVideo && (
-                <video src={preview} controls className="w-full h-full" />
-            )}
-
-            {preview && isAudio && (
-                <audio src={preview} controls className="w-full h-full" />
-            )}
-
-            {loading && (
-                <div className="absolute inset-0 flex  items-center justify-center bg-white/50">
-                    <span className="loading-spinner" />
-                </div>
-            )}
-
-
-
-
-
-
-
-        </>)
-
-
-
-    const isDisabled =
-        loading || (fetch.method === "GET" && !controlsPreview);
-
-
-    return (
-        <label
-            className={`relative flex items-center justify-center cursor-pointer hover:bg-gray-200 ${style} ${loading ? "pointer-events-none" : ""
-                }`}
-        >
-            {typeof controlsPreview === "function" ? (
-                <div className="flex flex-col items-center gap-2">
-                    {IconComponent && <IconComponent />}
-                </div>
-            ) : (
-                <DefaultPreview />
-            )}
-
-
-            <input
-                type="file"
-                className="hidden"
-                accept={accept ? `${accept}/*` : undefined}
-                disabled={isDisabled}
-                onChange={handleFileChange}
-            />
-
-
-            {error && (
-                <CustomNotification
-                    type="error"
-                    message={`Upload error: ${error}`}
+                <input
+                    accept={accept}
+                    type="file"
+                    className="hidden outLine-none"
+                    onChange={handleFile}
                 />
-            )}
-        </label>
-    );
-};
+            </label>
+        )
+
+    }
+    const FilePreview = ({
+        className,
+        mssage,
+        children,
+        icon: Icon,
+        imgClassName,
+        ...rest
+    }) => {
 
 
-
-export function uploadToServer({ formData, refetch, method = "GET" }) {
-
-
-    const serverCall = async () => {
-
-        try {
-            const data = await refetch({
-                method,
-                body: formData,
-            });
-            return data
-
-        } catch {
-            return null
-
-        }
+        return (
+            <div className={`relative flex items-center justify-center w-full h-full ${className}`}>
+                {
+                    prev ?
+                        <>
+                            <img
+                                src={prev}
+                                {...rest}
+                                className={`w-full h-full ${imgClassName}`}
+                            />
+                            <button
+                                onClick={previewClear}
+                                className="absolute  right-0 top-0 text-red-500  p-0.5 bg-white  font-medium rounded-full hover:bg-indigo-200 ">
+                                <FaTimes />
+                            </button>
+                        </> :
+                        <div className="w-full h-full   g items-center justify-center">
+                            {children ?? (Icon && <Icon className="w-4 h-4 text-gray-400 inline" />)}
+                            <p className=" text-xs text-gray-400 mt-1 capitalize text-center">{mssage}</p>
+                        </div>
+                }
+            </div>)
     }
 
-    return serverCall()
-};
-
-export function FileInput({ handleFile, accept = "image", ...rest }) {
-
-    const localPreviewRef = useRef(null);
-
-    /* ---------------- file change ---------------- */
-    const handleFileChange = (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
 
 
-        if (localPreviewRef.current) {
-            URL.revokeObjectURL(localPreviewRef.current);
-        }
-        const previewUrl = URL.createObjectURL(file);
-        localPreviewRef.current = previewUrl;
-
-        handleFile(file, previewUrl)
-    };
-
-    useEffect(() => {
-        return () => {
-            if (localPreviewRef.current) {
-                URL.revokeObjectURL(localPreviewRef.current);
-            }
-        };
-    }, []);
-
-    return (
-        <>
-            <input {...rest}
-                accept={`${accept}/*`}
-                type="file"
-                className="hidden"
-                onChange={handleFileChange}
-            />
-
-        </>
-
-
-    )
+    return [FileInput, FilePreview]
 
 
 }
-export function MediaPreview({ url, className, children, ...rest }) {
+// export function FileInput({
+//     className,
+//     fileCollBack,
+//     accept = "image",
+//     children,
+//     icon: Icon,
+//     ...rest
+
+// }) {
+
+
+
+//     const localPreviewRef = useRef(null);
+
+//     const FileChange = (e) => {
+//         const file = e.target.files?.[0];
+//         if (!file) return;
+
+//         if (localPreviewRef.current) {
+//             URL.revokeObjectURL(localPreviewRef.current);
+//         }
+
+//         const previewUrl = URL.createObjectURL(file);
+//         localPreviewRef.current = previewUrl;
+//         fileCollBack?.(file, previewUrl);
+//     };
+
+//     useEffect(() => {
+//         return () => {
+//             if (localPreviewRef.current) {
+//                 URL.revokeObjectURL(localPreviewRef.current);
+//             }
+//         };
+//     }, []);
+
+
+//     return (
+//         <label
+//             {...rest}
+//             className={`relative inset-0 hover:bg-gray-200 z-50 flex items-center justify-center cursor-pointer ${className}`}
+//         >
+//             <span className="absolute">
+//                 {children ?? (Icon && <Icon />)}
+//             </span>
+//             <input
+
+//                 accept={accept}
+//                 type="file"
+//                 className="hidden outLine-none"
+//                 onChange={FileChange}
+//             />
+//         </label>
+
+
+//     )
+
+
+// }
+
+// export function FilePreviewAndInput({
+//     className,
+//     imgClassName,
+//     fileCollBack,
+//     accept = "image",
+//     children,
+//     fileClear = () => { },
+//     icon: Icon,
+//     ...rest
+// }) {
+
+
+//     const [preview, setPreview] = useState(null);
+//     const localPreviewRef = useRef(null);
+
+//     const handleFile = (e) => {
+//         const file = e.target.files?.[0];
+//         if (!file) return;
+
+//         if (localPreviewRef.current) {
+//             URL.revokeObjectURL(localPreviewRef.current);
+//         }
+
+//         const url = URL.createObjectURL(file);
+//         localPreviewRef.current = url;
+
+
+
+//         setPreview(url);
+//         fileCollBack?.(file);
+//     };
+
+//     const previewClear = () => {
+//         if (localPreviewRef.current) {
+//             URL.revokeObjectURL(localPreviewRef.current);
+//             localPreviewRef.current = null;
+//         }
+//         fileClear()
+//         setPreview(null);
+//     };
+
+//     useEffect(() => {
+//         return () => {
+//             if (localPreviewRef.current) {
+//                 URL.revokeObjectURL(localPreviewRef.current);
+//             }
+//         };
+//     }, []);
+
+
+
+
+//     return (
+//         <div className={`relative flex items-center justify-center   ${className}`}>
+//             <label
+//                 className=" flex flex-col items-center justify-center cursor-pointer hover:scale-105 hover:bg-gray-200   w-full h-full"
+
+//             >
+//                 {preview ? console.log(accept) : ""}
+
+//                 {preview ? (
+//                     accept === "image" ? (
+//                         <img src={preview} {...rest} className={`w-full h-full ${imgClassName}`} />
+//                     ) : accept === "video" ? (
+//                         <video controls src={preview} {...rest} className={`w-full h-full ${imgClassName}`} />
+//                     ) : accept === "audio" ? (
+//                         <audio controls src={preview} {...rest} className={`w-full h-full ${imgClassName}`} />
+//                     ) : null
+//                 ) : (
+//                     <>
+//                         <span>{children ?? (Icon && <Icon />)}</span>
+//                         <p className="text-xs text-gray-400 capitalize">{accept}</p>
+//                     </>
+//                 )}
+
+//                 <input
+//                     accept={`${accept}/*`}
+//                     type="file"
+//                     className="hidden"
+//                     onChange={handleFile}
+//                 />
+//             </label>
+//             {preview && (
+//                 <button
+//                     onClick={previewClear}
+//                     className="absolute   right-0 top-0 text-red-500  p-0.5 bg-white 
+//                   font-medium rounded-full hover:bg-indigo-200 ">
+//                     <FaTimes />
+//                 </button>
+//             )}
+//         </div>
+
+//     );
+// }
+
+
+
+
+export function FilePreviewAndInput({
+    className,
+    imgClassName,
+    fileCollBack,
+    accept = "image",
+    children,
+    fileClear = () => { },
+    icon: Icon,
+    ...rest
+}) {
+    const [preview, setPreview] = useState(null);
+    const localPreviewRef = useRef(null);
+    const inputRef = useRef(null);
+
+    const handleFile = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (localPreviewRef.current) {
+            URL.revokeObjectURL(localPreviewRef.current);
+        }
+
+        const url = URL.createObjectURL(file);
+        localPreviewRef.current = url;
+
+        setPreview(url);
+        fileCollBack?.(file);
+
+        // important fix
+        e.target.value = "";
+    };
+    const previewClear = () => {
+        if (localPreviewRef.current) {
+            URL.revokeObjectURL(localPreviewRef.current);
+            localPreviewRef.current = null;
+        }
+
+        setPreview(null);
+        fileClear();
+
+        if (inputRef.current) {
+            inputRef.current.value = "";
+        }
+    };
+
+    useEffect(() => {
+        return () => {
+            if (localPreviewRef.current) {
+                URL.revokeObjectURL(localPreviewRef.current);
+            }
+        };
+    }, []);
+
     return (
-        <label {...rest} className={`relative flex items-center justify-center cursor-pointer  `}>
-            <img src={url} alt="img" className={`w-full h-full hover:bg-gray-60 hover:bg-gray-200 ${className}`} />
-            {children}
-        </label>)
+        <div className={`relative flex items-center justify-center ${className}`}>
+            <label className="flex flex-col items-center justify-center cursor-pointer hover:scale-105 hover:bg-gray-200 w-full h-full">
+
+                {preview ? (
+                    accept === "image" ? (
+                        <img
+                            
+                            src={preview}
+                            {...rest}
+                            className={`w-full h-full ${imgClassName}`}
+                        />
+                    ) : accept === "video" ? (
+                        <video
+                            type="video/mp4"
+                            controls
+                            src={preview}
+                            {...rest}
+                            className={`w-full h-full ${imgClassName}`}
+                        />
+                    ) : accept === "audio" ? (
+                        <audio
+                           
+                            controls
+                            src={preview}
+                            {...rest}
+                            className={`w-full ${imgClassName}`}
+                        />
+                    ) : null
+                ) : (
+                    <>
+                        <span>{children ?? (Icon && <Icon />)}</span>
+                        <p className="text-xs text-gray-400 capitalize">{accept}</p>
+                    </>
+                )}
+
+                <input
+                    ref={inputRef}
+                    accept={`${accept}/*`}
+                    type="file"
+                    className="hidden"
+                    onChange={handleFile}
+                />
+            </label>
+
+            {preview && (
+                <button
+                    type="button"
+                    onClick={previewClear}
+                    className="absolute right-0 top-0 text-red-500 p-0.5 bg-white 
+          font-medium rounded-full hover:bg-indigo-200"
+                >
+                    <FaTimes />
+                </button>
+            )}
+        </div>
+    );
 }
