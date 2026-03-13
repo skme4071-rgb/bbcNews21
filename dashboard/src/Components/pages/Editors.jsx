@@ -240,7 +240,7 @@ export default function Editors() {
     formData.append("content", content)
     formData.append("category", category)
     formData.append("summary", summary)
-    formData.append("sourceType", "tvd")
+    formData.append("sourceType", "tv")
     formData.append("author",author )
 
 
