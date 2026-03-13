@@ -185,7 +185,7 @@ const SourceCard = () => {
 export default function Editors() {
 
 
-  const { ...articleAPI } = useFetch(`${API_URL}/Article`)
+  const { ...articleAPI } = useFetch(`${API_URL}/Articles`)
 
 
   const [article, setArticle] = useState({
