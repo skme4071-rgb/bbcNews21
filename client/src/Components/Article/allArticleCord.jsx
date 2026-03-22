@@ -10,11 +10,16 @@ import {
 
 
 export function LeadStoryCord({ data = {} }) {
-  const { source, author, title, url, publishedAt, content, category, media } =
-    data;
+  const {
+    source, author, title, url,
+    publishedAt, content, category,
+    media = []
+  } = data;
 
-  const coverImage = media?.find((v) => v.type === "cover");
 
+
+  // const coverImage = media?.find((v) => v.type === "cover");
+  const coverImage = media[0];
   return (
     <article className="border-b border-gray-200 pb-8">
       <div className="bg-gradient-to-br from-green-500 to-blue-600 relative h-full w-full sm:h-80  rounded-xl  overflow-hidden  ">
@@ -44,6 +49,7 @@ export function LeadStoryCord({ data = {} }) {
 }
 
 export function SecondaryStoryCord({ datas = [] }) {
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {datas.map((story, i) => {
@@ -59,7 +65,9 @@ export function SecondaryStoryCord({ datas = [] }) {
           _id,
         } = story;
 
-        const coverImage = media?.find((v) => v.type === "cover");
+        // const coverImage = media?.find((v) => v.type === "gallery");
+        const coverImage = media[0];
+
 
         return (
           <CustomLink
@@ -341,9 +349,13 @@ export function LocalWeatherCord({ name, icon, WeatherData = [] }) {
   );
 }
 export function DetailsArticleCord({ data = {} }) {
-  const { source, author, publishedAt, content, description, category, media, } = data;
-  const coverImage = media?.find((v) => v.type === "cover");
-
+  const {
+    source, author, publishedAt,
+    content, description, category,
+    media = [],
+  } = data;
+  // const coverImage = media?.find((v) => v.type === "cover");
+  const coverImage = media[0];
   return (
     <article className="border-b border-gray-200 pb-8">
       <div className="bg-gradient-to-br from-red-600 to-blue-600 h-64 mb-4 flex items-center justify-center rounded-xl shadow-lg">

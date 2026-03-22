@@ -206,7 +206,9 @@
   }
   100% {
     transform: rotate(360deg);
+    
   }
+
 }
 
 /* Enhanced Mobile Responsive Styles */
@@ -218,6 +220,7 @@
 
   .admin-sidebar.show {
     transform: translateX(0);
+   
   }
 
   .mobile-admin-overlay {

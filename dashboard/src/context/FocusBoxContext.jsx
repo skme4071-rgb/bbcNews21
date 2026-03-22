@@ -22,7 +22,7 @@ export default function FocusBoxProvider({ children }) {
     };
 
     return (
-       
+
         <FocusBoxContext.Provider value={{ state, setFocusBox, closeFocusBox }}>
             {children}
 
@@ -36,13 +36,11 @@ export default function FocusBoxProvider({ children }) {
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div
-                            className="
+                            className=" 
             bg-white relative shadow-xl flex flex-col
             w-full h-[100dvh] rounded-none
-            min-[441px]:w-[410px]
-            min-[441px]:h-[520px]
-            min-[441px]:max-h-[90vh]
-            min-[441px]:rounded-xl
+
+            
           "
                         >
                             {state.element}
@@ -59,3 +57,8 @@ export function ContextFocusBox() {
     return useContext(FocusBoxContext);
 }
 
+// w - full h - [100dvh] rounded - none
+// min - [441px]: w - [410px]
+// min - [441px]: h - [520px]
+// min - [441px]: max - h - [90vh]
+// min - [441px]: rounded - xl

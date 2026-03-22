@@ -10,12 +10,15 @@ export function useFetch(url) {
     });
 
     const fetchData = useCallback(
-        async ({ method = "GET", body = null, params = {}, headers = {} } = {}) => {
+        async ({ method = "GET", body = null, params = {}, headers = {}, route = null } = {}) => {
             setState(v => ({ ...v, error: null, loading: true }));
 
             try {
                 const query = new URLSearchParams(params).toString();
-                const finalUrl = query ? `${url}?${query}` : url;
+
+                const routeUrl = route ? `${url}/${route}` : url;
+                const finalUrl = query ? `${url}?${query}` : routeUrl;
+                // const finalUrl = query ? `${url}?${query}` : url;
 
 
                 const isFormData = body instanceof FormData;

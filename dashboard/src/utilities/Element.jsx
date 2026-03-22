@@ -252,7 +252,7 @@ export const TextareaAutoResize = ({
             }}
             placeholder={placeholder}
             className={`w-full resize-none outline-none  overflow-hidden ${className}`}
-            
+
         />
     );
 };
@@ -287,7 +287,7 @@ export const Select = ({ options, onChange, value, ...rest }) => {
     return (
         <div className="common-select">
             <select {...rest} value={value} onChange={(e) => onChange(e)}>
-                {options.map((option , i) => {
+                {options.map((option, i) => {
                     const val = typeof option === "string" ? option : option.value;
                     const label = typeof option === "string" ? option : option.label;
                     return (
@@ -409,4 +409,53 @@ export const CustomMainLabel = ({ name = null, ObjName = null, value, handleChan
             </div>
         </label>
     )
+}
+
+
+
+export const AccessRole = ({ accessRole = ["user"], role, AccessComponet }) => {
+    if (!role || !accessRole.includes(role)) return
+    return typeof AccessComponet === "function" && <AccessComponet />
+};
+
+
+export function CustomUndo({ undoFun = () => {}}) {
+
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        setVisible(true);
+
+        const timer = setTimeout(() => {
+            setVisible(false);
+        }, 3000);
+
+        return () => clearTimeout(timer);
+    }, []);
+
+    return (
+        <div
+            className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm 
+      bg-red-600 text-white transform transition-all duration-300
+      ${visible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"}`}
+        >
+            <div className="flex items-center justify-between gap-4">
+
+                <p className="text-sm font-medium">
+                    Article deleted
+                </p>
+
+                <button
+                    onClick={() => {
+                        undoFun();
+                        setVisible(false);
+                    }}
+                    className="bg-white text-red-600 px-3 py-1 rounded text-xs font-semibold hover:bg-gray-100"
+                >
+                    Undo
+                </button>
+
+            </div>
+        </div>
+    );
 }

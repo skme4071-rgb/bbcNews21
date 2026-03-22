@@ -1,150 +1,166 @@
 import mongoose from "mongoose";
 import createError from "http-errors";
 import { Source, User, News } from "./../Models/Model.js";
-import { fileCleanupFields } from "./../Middleware/multer.js";
+import { fileCleanupFields, fileCleanupArray } from "./../Middleware/multer.js";
+// ---------------- Create ----------------
+export const Create = async (req, res) => {
+  try {
+    const { id, role } = req.user;
+    const files = req.files || {};
 
+    const {
+      title,
+      content,
+      description,
+      summary,
+      author,
+      category,
+      sourceType,
+      tags,
+    } = req.body;
 
-// export const Create = async (req, res, next) => {
+    const source = await Source.findOne({ type: sourceType });
 
-//     console.log(req.files);
+    if (!source) {
+      throw createError(404, "Source type not found");
+    }
 
+    // MEDIA PROCESS
+    const media = Object.keys(files).flatMap((key) =>
+      files[key].map((file) => ({
+        filename: file.filename,
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        type: key,
+        url: `${process.env.BASE_URL}/upload/${file.filename}`,
+        createdBy: id,
+      })),
+    );
 
-//     const session = await mongoose.startSession();
-//     session.startTransaction();
+    const article = await News.create({
+      title,
+      content,
+      description,
+      summary,
+      author,
+      role,
+      category,
+      source: source._id,
+      media,
+      state: "draft",
+      tags: tags ? tags.split(",") : [],
+      createdBy: id,
+    });
 
-//     try {
-//         const { role, id } = req.user;
-//         const { title, description, content, tags, category, sourceType, summary } = req.body;
+    res.status(201).json({
+      success: true,
+      message: "Article created successfully",
+      data: article,
+    });
+  } catch (error) {
+    await fileCleanupFields(req);
 
-//         const file = req.files?.[0];
-
-//         // if (!url || !type || !name || !file) {
-//         //     throw createError(400, "All fields are required");
-//         // }
-
-//         // const isExists = await News.findOne({ type }).session(session);
-//         // if (isExists) {
-//         //     throw createError(409, "Source already exists");
-//         // }
-
-//         const fileUrl = `${process.env.BASE_URL}/upload/${file.filename}`;
-
-//         const news = await News.create([{
-//             role,
-//             createdBy: id,
-//             title, description, content, tags, category, sourceType, summary,
-//             media: [{
-//                 filename: file.filename,
-//                 originalname: file.originalname,
-//                 mimetype: file.mimetype,
-//                 size: file.size,
-//                 type: "image",
-//                 url: fileUrl,
-//                 createdBy: id,
-//             }],
-//         }], { session });
-
-//         await session.commitTransaction();
-//         session.endSession();
-
-//         return res.status(201).json({
-//             success: true,
-//             news: sews[0],
-//         });
-
-//     } catch (error) {
-//         await session.abortTransaction();
-//         session.endSession();
-//         await fileCleanup(req)
-//         return next(error);
-//     }
-// };
-
+    res.status(500).json({
+      success: false,
+      message: "Article creation failed",
+      error: error.message,
+    });
+  }
+};
 
 
 // // ---------------- Update ----------------
 export const Update = async (req, res, next) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-    try {
-        const { sourceType } = req.params;
-        const { name, url, purpose } = req.body;
-        const userId = req.user.id
+  try {
+    const { sourceType } = req.params;
+    const { name, url, purpose } = req.body;
+    const userId = req.user.id;
 
-        const source = await Source.findOne({ type: sourceType }).session(session).populate("createdBy");
-        if (!source) throw createError(404, "Source not found");
+    const source = await Source.findOne({ type: sourceType })
+      .session(session)
+      .populate("createdBy");
+    if (!source) throw createError(404, "Source not found");
 
-        if (!source.createdBy._id.equals(userId)) {
-            throw createError(403, "Unauthorized access");
-        }
-        // Update fields
-        if (name) source.name = name;
-        if (url) source.url = url;
-        if (purpose) source.media.purpose = purpose;
-
-        const oldFile = source.media; // keep old file reference
-
-        // Optional: replace file
-        if (req.files?.[0]) {
-            const file = req.files[0];
-            source.media = {
-                filename: file.filename,
-                originalname: file.originalname,
-                mimetype: file.mimetype,
-                size: file.size,
-                purpose: purpose || oldFile.purpose,
-                type: "image",
-                url: `${process.env.BASE_URL}/upload/${file.filename}`,
-                createdBy: source.createdBy
-            };
-        }
-
-        await source.save({ session });
-        await session.commitTransaction();
-        session.endSession();
-
-        // Cleanup old file if new file uploaded
-        if (req.files?.[0]) await fileCleanup({ files: [oldFile] });
-
-        res.status(200).json({ success: true, source });
-    } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
-
-        // Cleanup uploaded new files if error
-        if (req.files?.length > 0) await fileCleanup(req);
-
-        next(error);
+    if (!source.createdBy._id.equals(userId)) {
+      throw createError(403, "Unauthorized access");
     }
+    // Update fields
+    if (name) source.name = name;
+    if (url) source.url = url;
+    if (purpose) source.media.purpose = purpose;
+
+    const oldFile = source.media; // keep old file reference
+
+    // Optional: replace file
+    if (req.files?.[0]) {
+      const file = req.files[0];
+      source.media = {
+        filename: file.filename,
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        purpose: purpose || oldFile.purpose,
+        type: "image",
+        url: `${process.env.BASE_URL}/upload/${file.filename}`,
+        createdBy: source.createdBy,
+      };
+    }
+
+    await source.save({ session });
+    await session.commitTransaction();
+    session.endSession();
+
+    // Cleanup old file if new file uploaded
+    if (req.files?.[0]) await fileCleanup({ files: [oldFile] });
+
+    res.status(200).json({ success: true, source });
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+
+    // Cleanup uploaded new files if error
+    if (req.files?.length > 0) await fileCleanup(req);
+
+    next(error);
+  }
 };
 
 // ---------------- Delete ----------------
+
 export const Delete = async (req, res, next) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-    try {
-        const { sourceType } = req.params;
+  try {
+    const { id: userId, role } = req.user; // authenticated user
+    const { id } = req.params;
 
-        const source = await Source.findOne({ type: sourceType }).session(session);
-        if (!source) throw createError(404, "Source not found");
+    const news = await News.findOne({ _id: id }).session(session);
+    if (!news) throw createError(404, "news not found");
 
-
-
-        await fileCleanup({ files: [source.media] });
-
-        await Source.deleteOne({ _id: id }).session(session);
-
-        await session.commitTransaction();
-        session.endSession();
-
-        res.status(200).json({ success: true, message: "Source deleted successfully" });
-    } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
-        next(error);
+    // Optional: permission check
+    if (role !== "admin" && news.createdBy.toString() !== userId) {
+      throw createError(403, "Not authorized to delete this news");
     }
+    // Remove media files
+    await fileCleanupArray({ files: news.media });
+
+    // Delete news
+    await news.deleteOne({ _id: id }).session(session);
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(200).json({ success: true, message: "news deleted successfully" });
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    next(error);
+  }
 };
 
 // // ---------------- Get Single ----------------
@@ -161,947 +177,648 @@ export const Delete = async (req, res, next) => {
 // };
 
 // ---------------- Get All ----------------
+
 export const GetAll = async (req, res, next) => {
-    try {
+  try {
 
-        const news = await News.find().sort({ createdAt: -1 });
+    const news = await News
+      .find()
+      .populate("createdBy", "role")
+      .sort({ createdAt: -1 });
 
-        res.status(200).json({
-            status: "ok",
-            success: true,
-            totalResults: news.length,
-            articles: news
-        });
+    res.status(200).json({
+      status: "ok",
+      success: true,
+      totalResults: news.length,
+      articles: news
+    });
 
-    } catch (error) {
-        next(error);
-    }
+  } catch (error) {
+    next(error);
+  }
 };
 
-
-
-export const Create = async (req, res) => {
-
-    try {
-
-        const { id, role } = req.user;
-        const files = req.files || {};
-
-        const {
-            title,
-            content,
-            description,
-            summary,
-            author,
-            category,
-            sourceType,
-            tags
-        } = req.body;
-
-        const source = await Source.findOne({ type: sourceType });
-
-        if (!source) {
-            throw createError(404, "Source type not found");
-        }
-
-        // MEDIA PROCESS
-        const media = Object.keys(files).flatMap((key) =>
-            files[key].map((file) => ({
-                filename: file.filename,
-                originalname: file.originalname,
-                mimetype: file.mimetype,
-                size: file.size,
-                type: key,
-                url: `${process.env.BASE_URL}/upload/${file.filename}`,
-                createdBy: id
-            }))
-        );
-
-        const article = await News.create({
-            title,
-            content,
-            description,
-            summary,
-            author,
-            role,
-            category,
-            source: source._id,
-            media,
-            state: "draft",
-            tags: tags ? tags.split(",") : [],
-            createdBy: id
-        });
-
-
-
-        res.status(201).json({
-            success: true,
-            message: "Article created successfully",
-            data: article
-        });
-
-    } catch (error) {
-
-
-
-        await fileCleanupFields(req);
-
-        res.status(500).json({
-            success: false,
-            message: "Article creation failed",
-            error: error.message
-        });
-    }
-};
 
 
 // export const GetAll = async (req, res) => {
-
-
-
-//     res.json({
-//         status: "ok",
-//         success: true,
-//         totalResults: 4742,
-
-
-//         articles: [
-//             {
-//                 category: "Business",
-//                 media: [
-//                     {
-//                         type: "cover",
-//                         url: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100"
-//                     }
-//                 ],
-//                 id: new Date(),
-//                 source: {
-//                     logoToUrl: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100"
-//                     , id: "lasetProdact123",
-//                     name: "Internet",
-//                     url: "Business",
-//                 },
-//                 author: "info@thehackernews.com (The Hacker News)",
-//                 title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
-//                 description:
-//                     "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
-//                 url: "/Details",
-//                 urlToImage:
-//                     "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-//                 publishedAt: new Date(),
-//                 content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
+//   const articles = [
+//     {
+//       category: "Business",
+//       media: [
+//         {
+//           type: "cover",
+//           url: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+//         },
+//       ],
+//       _id: `${new Date().getSeconds()}ew1`,
+//       source: {
+//         logoToUrl:
+//           "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+//         id: "lasetProdact123",
+//         name: "Internet",
+//         url: "Business",
+//       },
+//       author: "info@thehackernews.com (The Hacker News)",
+//       title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
+//       description:
+//         "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
+//       url: "/Details",
+//       urlToImage:
+//         "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+//       publishedAt: new Date(),
+//       content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
 // শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
 
 // `,
-//                 summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
+//       summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
 
-//                 metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
-//                 metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
-//                 focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
+//       metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
+//       metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
+//       focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
 
-//                 likes: {
-//                     totalLikes: 53,
-//                     likes: false,
-//                 },
-//                 share: {
-//                     totalShare: 33,
-//                     urlToShare: "",
-//                 },
-//                 comments: {
-//                     totalComments: 458983,
-//                 },
-//             },
+//       likes: {
+//         totalLikes: 53,
+//         likes: false,
+//       },
+//       share: {
+//         totalShare: 33,
+//         urlToShare: "",
+//       },
+//       comments: {
+//         totalComments: 458983,
+//       },
+//     },
 
-
-
-
-//             {
-//                 id: `${new Date()}ew3`,
-//                 category: "UK",
-//                 source: {
-//                     id: "lasetProdact123",
-//                     name: "Internet",
-//                     category: "Business",
-//                 },
-//                 author: "info@thehackernews.com (The Hacker News)",
-//                 title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
-//                 description:
-//                     "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
-//                 url: "/Details",
-//                 urlToImage:
-//                     "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-//                 publishedAt: new Date(),
-//                 content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
+//     {
+//       _id: `${new Date().getSeconds()}ew2`,
+//       category: "UK",
+//       source: {
+//         id: "lasetProdact123",
+//         name: "Internet",
+//         category: "Business",
+//       },
+//       author: "info@thehackernews.com (The Hacker News)",
+//       title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
+//       description:
+//         "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
+//       url: "/Details",
+//       urlToImage:
+//         "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+//       publishedAt: new Date(),
+//       content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
 // শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
 
 // `,
-//                 summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
+//       summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
 
-//                 metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
-//                 metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
-//                 focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
+//       metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
+//       metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
+//       focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
 
-//                 likes: {
-//                     totalLikes: 53,
-//                     likes: false,
-//                 },
-//                 share: {
-//                     totalShare: 33,
-//                     urlToShare: "",
-//                 },
-//                 comments: {
-//                     totalComments: 458983,
-//                 },
-//             },
-//             {
-//                 id: `${new Date()}35`,
-//                 category: "Politics",
-//                 source: {
-//                     id: "lasetProdact123",
-//                     name: "Internet",
-//                     category: "Business",
-//                 },
-//                 author: "info@thehackernews.com (The Hacker News)",
-//                 title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
-//                 description:
-//                     "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
-//                 url: "/Details",
-//                 urlToImage:
-//                     "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-//                 publishedAt: new Date(),
-//                 content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
+//       likes: {
+//         totalLikes: 53,
+//         likes: false,
+//       },
+//       share: {
+//         totalShare: 33,
+//         urlToShare: "",
+//       },
+//       comments: {
+//         totalComments: 458983,
+//       },
+//     },
+//     {
+//       _id: `${new Date().getSeconds()}35`,
+//       category: "Politics",
+//       source: {
+//         id: "lasetProdact123",
+//         name: "Internet",
+//         category: "Business",
+//       },
+//       author: "info@thehackernews.com (The Hacker News)",
+//       title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
+//       description:
+//         "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
+//       url: "/Details",
+//       urlToImage:
+//         "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+//       publishedAt: new Date(),
+//       content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
 // শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
 
 // `,
-//                 summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
+//       summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
 
-//                 metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
-//                 metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
-//                 focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
+//       metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
+//       metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
+//       focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
 
-//                 likes: {
-//                     totalLikes: 53,
-//                     likes: false,
-//                 },
-//                 share: {
-//                     totalShare: 33,
-//                     urlToShare: "",
-//                 },
-//                 comments: {
-//                     totalComments: 458983,
-//                 },
-//             },
-//             {
-//                 id: `${new Date()}34`,
-//                 category: "Sport",
-//                 source: {
-//                     id: "lasetProdact123",
-//                     name: "Internet",
-//                     category: "Business",
-//                 },
-//                 author: "info@thehackernews.com (The Hacker News)",
-//                 title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
-//                 description:
-//                     "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
-//                 url: "/Details",
-//                 urlToImage:
-//                     "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-//                 publishedAt: new Date(),
-//                 content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
+//       likes: {
+//         totalLikes: 53,
+//         likes: false,
+//       },
+//       share: {
+//         totalShare: 33,
+//         urlToShare: "",
+//       },
+//       comments: {
+//         totalComments: 458983,
+//       },
+//     },
+//     {
+//       _id: `${new Date().getSeconds()}34`,
+//       category: "Sport",
+//       source: {
+//         id: "lasetProdact123",
+//         name: "Internet",
+//         category: "Business",
+//       },
+//       author: "info@thehackernews.com (The Hacker News)",
+//       title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
+//       description:
+//         "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
+//       url: "/Details",
+//       urlToImage:
+//         "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+//       publishedAt: new Date(),
+//       content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
 // শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
 
 // `,
-//                 summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
+//       summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
 
-//                 metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
-//                 metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
-//                 focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
+//       metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
+//       metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
+//       focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
 
-//                 likes: {
-//                     totalLikes: 53,
-//                     likes: false,
-//                 },
-//                 share: {
-//                     totalShare: 33,
-//                     urlToShare: "",
-//                 },
-//                 comments: {
-//                     totalComments: 458983,
-//                 },
-//             },
-//             {
-//                 id: `${new Date()}3`,
-//                 category: "Science",
-//                 source: {
-//                     name: "Info 24",
-//                     logo: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-//                     url: "http://localhost:5173/",
-//                     type: "newspaper",
-//                 },
+//       likes: {
+//         totalLikes: 53,
+//         likes: false,
+//       },
+//       share: {
+//         totalShare: 33,
+//         urlToShare: "",
+//       },
+//       comments: {
+//         totalComments: 458983,
+//       },
+//     },
+//     {
+//       _id: `${new Date().getSeconds()}345`,
+//       category: "Science",
+//       source: {
+//         name: "Info 24",
+//         logo: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+//         url: "http://localhost:5173/",
+//         type: "newspaper",
+//       },
 
-//                 author: "info@thehackernews.com (The Hacker News)",
-//                 title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
-//                 description:
-//                     "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
-//                 url: "/Details",
-//                 urlToVideo: `c:\Users\iqbal\OneDrive\Desktop\Ho Gaya Hai Tujhko To Pyar Sajna MP3 Song Download - Dilwale Dulhania Le Jayenge.mp4`,
-//                 urlToImage:
-//                     "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-//                 publishedAt: new Date(),
-//                 content: `গৃহকর্মী নির্যাতনের অভিযোগে বিমান বাংলাদেশ এয়ারলাইনসের ব্যবস্থাপনা পরিচালককে স্ত্রীসহ গ্রেফতার করেছে পুলিশ। টিআইবি তাদের সবশেষ প্রতিবেদনে জানিয়েছে, ত্রয়োদশ জাতীয় সংসদ নির্বাচনের তফসিল ঘোষণার ৩৬ দিনের মধ্যে দেশে অন্তত ১৫ জন রাজনৈতিক কর্মী নিহত হয়েছেন। বাংলাদেশে আরো বেড়েছে এলপি গ্যাসের দাম। সবশেষ খবর জানতে চোখ রাখুন `,
-//                 summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
+//       author: "info@thehackernews.com (The Hacker News)",
+//       title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
+//       description:
+//         "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
+//       url: "/Details",
+//       urlToVideo: `c:\Users\iqbal\OneDrive\Desktop\Ho Gaya Hai Tujhko To Pyar Sajna MP3 Song Download - Dilwale Dulhania Le Jayenge.mp4`,
+//       urlToImage:
+//         "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+//       publishedAt: new Date(),
+//       content: `গৃহকর্মী নির্যাতনের অভিযোগে বিমান বাংলাদেশ এয়ারলাইনসের ব্যবস্থাপনা পরিচালককে স্ত্রীসহ গ্রেফতার করেছে পুলিশ। টিআইবি তাদের সবশেষ প্রতিবেদনে জানিয়েছে, ত্রয়োদশ জাতীয় সংসদ নির্বাচনের তফসিল ঘোষণার ৩৬ দিনের মধ্যে দেশে অন্তত ১৫ জন রাজনৈতিক কর্মী নিহত হয়েছেন। বাংলাদেশে আরো বেড়েছে এলপি গ্যাসের দাম। সবশেষ খবর জানতে চোখ রাখুন `,
+//       summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
 
-//                 SEO: {
-//                     metaTitle:
-//                         "হালকা চোট কাটিয়ে একাদশে ফিরেই একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর ",
-//                     metaDescription:
-//                         "র রীতিমতো তাণ্ডব চালালেন একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর ",
-//                     focusKeyword:
-//                         "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর ",
-//                     score: 49,
-//                 },
-//                 likes: {
-//                     totalLikes: 53,
-//                     likes: false,
-//                 },
-//                 share: {
-//                     totalShare: 33,
-//                     urlToShare: "",
-//                 },
-//                 comments: {
-//                     totalComments: 458983,
-//                 },
-//             },
-//         ],
-//     });
-// }
+//       SEO: {
+//         metaTitle:
+//           "হালকা চোট কাটিয়ে একাদশে ফিরেই একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর ",
+//         metaDescription:
+//           "র রীতিমতো তাণ্ডব চালালেন একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর ",
+//         focusKeyword:
+//           "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর ",
+//         score: 49,
+//       },
+//       likes: {
+//         totalLikes: 53,
+//         likes: false,
+//       },
+//       share: {
+//         totalShare: 33,
+//         urlToShare: "",
+//       },
+//       comments: {
+//         totalComments: 458983,
+//       },
+//     },
+//   ];
+
+//   const { len } = req.query;
+
+//   res.json({
+//     status: "ok",
+//     success: true,
+//     totalResults: articles.length,
+//     articles: articles.slice(0, len),
+//   });
+// };
+
+
 export const GetSingle = async (req, res) => {
-    const category = req.params?.category
+  const category = req.params?.category;
 
-    res.json({
-        status: "ok",
-        success: true,
-        totalResults: 4742,
+  res.json({
+    status: "ok",
+    success: true,
+    totalResults: 4742,
 
-
-        articles: [
-            {
-                category: category,
-                media: [
-                    {
-                        type: "cover",
-                        url: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100"
-                    }
-                ],
-                id: new Date(),
-                source: {
-                    logoToUrl: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100"
-                    , id: "lasetProdact123",
-                    name: "Internet",
-                    url: "Business",
-                },
-                author: "info@thehackernews.com (The Hacker News)",
-                title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
-                description:
-                    "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
-                url: "/Details",
-                urlToImage:
-                    "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-                publishedAt: new Date(),
-                content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
-শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
-
-`,
-                summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
-
-                metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
-                metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
-                focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
-
-                likes: {
-                    totalLikes: 53,
-                    likes: false,
-                },
-                share: {
-                    totalShare: 33,
-                    urlToShare: "",
-                },
-                comments: {
-                    totalComments: 458983,
-                },
-            },
-            {
-                category: "Sport",
-                media: [
-                    {
-                        type: "cover",
-                        url: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100"
-                    }
-                ],
-                id: new Date(),
-                source: {
-                    logoToUrl: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100"
-                    , id: "lasetProdact123",
-                    name: "Internet",
-                    url: "Business",
-                },
-                author: "info@thehackernews.com (The Hacker News)",
-                title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
-                description:
-                    "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
-                url: "/Details",
-                urlToImage:
-                    "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-                publishedAt: new Date(),
-                content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
-শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
-
-`,
-                summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
-
-                metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
-                metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
-                focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
-
-                likes: {
-                    totalLikes: 53,
-                    likes: false,
-                },
-                share: {
-                    totalShare: 33,
-                    urlToShare: "",
-                },
-                comments: {
-                    totalComments: 458983,
-                },
-            },
-            {
-                category: "Sport",
-                media: [
-                    {
-                        type: "cover",
-                        url: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100"
-                    }
-                ],
-                id: new Date(),
-                source: {
-                    logoToUrl: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100"
-                    , id: "lasetProdact123",
-                    name: "Internet",
-                    url: "Business",
-                },
-                author: "info@thehackernews.com (The Hacker News)",
-                title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
-                description:
-                    "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
-                url: "/Details",
-                urlToImage:
-                    "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-                publishedAt: new Date(),
-                content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
-শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
-
-`,
-                summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
-
-                metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
-                metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
-                focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
-
-                likes: {
-                    totalLikes: 53,
-                    likes: false,
-                },
-                share: {
-                    totalShare: 33,
-                    urlToShare: "",
-                },
-                comments: {
-                    totalComments: 458983,
-                },
-            },
-            {
-                category: "Sport",
-                media: [
-                    {
-                        type: "cover",
-                        url: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100"
-                    }
-                ],
-                id: new Date(),
-                source: {
-                    logoToUrl: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100"
-                    , id: "lasetProdact123",
-                    name: "Internet",
-                    url: "Business",
-                },
-                author: "info@thehackernews.com (The Hacker News)",
-                title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
-                description:
-                    "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
-                url: "/Details",
-                urlToImage:
-                    "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-                publishedAt: new Date(),
-                content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
-শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
-
-`,
-                summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
-
-                metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
-                metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
-                focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
-
-                likes: {
-                    totalLikes: 53,
-                    likes: false,
-                },
-                share: {
-                    totalShare: 33,
-                    urlToShare: "",
-                },
-                comments: {
-                    totalComments: 458983,
-                },
-            },
-            {
-                category: "Sport",
-                media: [
-                    {
-                        type: "cover",
-                        url: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100"
-                    }
-                ],
-                id: new Date(),
-                source: {
-                    logoToUrl: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100"
-                    , id: "lasetProdact123",
-                    name: "Internet",
-                    url: "Business",
-                },
-                author: "info@thehackernews.com (The Hacker News)",
-                title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
-                description:
-                    "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
-                url: "/Details",
-                urlToImage:
-                    "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-                publishedAt: new Date(),
-                content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
-শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
-
-`,
-                summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
-
-                metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
-                metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
-                focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
-
-                likes: {
-                    totalLikes: 53,
-                    likes: false,
-                },
-                share: {
-                    totalShare: 33,
-                    urlToShare: "",
-                },
-                comments: {
-                    totalComments: 458983,
-                },
-            },
-
-
-
-
-            {
-                id: `${new Date()}ew3`,
-                category: "UK",
-                source: {
-                    id: "lasetProdact123",
-                    name: "Internet",
-                    category: "Business",
-                },
-                author: "info@thehackernews.com (The Hacker News)",
-                title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
-                description:
-                    "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
-                url: "/Details",
-                urlToImage:
-                    "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-                publishedAt: new Date(),
-                content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
-শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
-
-`,
-                summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
-
-                metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
-                metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
-                focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
-
-                likes: {
-                    totalLikes: 53,
-                    likes: false,
-                },
-                share: {
-                    totalShare: 33,
-                    urlToShare: "",
-                },
-                comments: {
-                    totalComments: 458983,
-                },
-            },
-            {
-                id: `${new Date()}35`,
-                category: "Politics",
-                source: {
-                    id: "lasetProdact123",
-                    name: "Internet",
-                    category: "Business",
-                },
-                author: "info@thehackernews.com (The Hacker News)",
-                title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
-                description:
-                    "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
-                url: "/Details",
-                urlToImage:
-                    "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-                publishedAt: new Date(),
-                content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
-শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
-
-`,
-                summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
-
-                metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
-                metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
-                focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
-
-                likes: {
-                    totalLikes: 53,
-                    likes: false,
-                },
-                share: {
-                    totalShare: 33,
-                    urlToShare: "",
-                },
-                comments: {
-                    totalComments: 458983,
-                },
-            },
-            {
-                id: `${new Date()}34`,
-                category: "Sport",
-                source: {
-                    id: "lasetProdact123",
-                    name: "Internet",
-                    category: "Business",
-                },
-                author: "info@thehackernews.com (The Hacker News)",
-                title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
-                description:
-                    "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
-                url: "/Details",
-                urlToImage:
-                    "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-                publishedAt: new Date(),
-                content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
-শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
-
-`,
-                summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
-
-                metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
-                metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
-                focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
-
-                likes: {
-                    totalLikes: 53,
-                    likes: false,
-                },
-                share: {
-                    totalShare: 33,
-                    urlToShare: "",
-                },
-                comments: {
-                    totalComments: 458983,
-                },
-            },
-            {
-                id: `${new Date()}3`,
-                category: "Science",
-                source: {
-                    name: "Info 24",
-                    logo: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-                    url: "http://localhost:5173/",
-                    type: "newspaper",
-                },
-
-                author: "info@thehackernews.com (The Hacker News)",
-                title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
-                description:
-                    "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
-                url: "/Details",
-                urlToVideo: `c:\Users\iqbal\OneDrive\Desktop\Ho Gaya Hai Tujhko To Pyar Sajna MP3 Song Download - Dilwale Dulhania Le Jayenge.mp4`,
-                urlToImage:
-                    "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-                publishedAt: new Date(),
-                content: `গৃহকর্মী নির্যাতনের অভিযোগে বিমান বাংলাদেশ এয়ারলাইনসের ব্যবস্থাপনা পরিচালককে স্ত্রীসহ গ্রেফতার করেছে পুলিশ। টিআইবি তাদের সবশেষ প্রতিবেদনে জানিয়েছে, ত্রয়োদশ জাতীয় সংসদ নির্বাচনের তফসিল ঘোষণার ৩৬ দিনের মধ্যে দেশে অন্তত ১৫ জন রাজনৈতিক কর্মী নিহত হয়েছেন। বাংলাদেশে আরো বেড়েছে এলপি গ্যাসের দাম। সবশেষ খবর জানতে চোখ রাখুন `,
-                summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
-
-                SEO: {
-                    metaTitle:
-                        "হালকা চোট কাটিয়ে একাদশে ফিরেই একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর ",
-                    metaDescription:
-                        "র রীতিমতো তাণ্ডব চালালেন একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর ",
-                    focusKeyword:
-                        "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর ",
-                    score: 49,
-                },
-                likes: {
-                    totalLikes: 53,
-                    likes: false,
-                },
-                share: {
-                    totalShare: 33,
-                    urlToShare: "",
-                },
-                comments: {
-                    totalComments: 458983,
-                },
-            },
+    articles: [
+      {
+        category: category,
+        media: [
+          {
+            type: "cover",
+            url: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+          },
         ],
-    });
-}
+        id: new Date(),
+        source: {
+          logoToUrl:
+            "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+          id: "lasetProdact123",
+          name: "Internet",
+          url: "Business",
+        },
+        author: "info@thehackernews.com (The Hacker News)",
+        title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
+        description:
+          "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
+        url: "/Details",
+        urlToImage:
+          "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+        publishedAt: new Date(),
+        content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
+শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
 
+`,
+        summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
 
+        metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
+        metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
+        focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
 
-// import { Source, News, Media, User } from "./../Models/Model.js";
+        likes: {
+          totalLikes: 53,
+          likes: false,
+        },
+        share: {
+          totalShare: 33,
+          urlToShare: "",
+        },
+        comments: {
+          totalComments: 458983,
+        },
+      },
+      {
+        category: "Sport",
+        media: [
+          {
+            type: "cover",
+            url: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+          },
+        ],
+        id: new Date(),
+        source: {
+          logoToUrl:
+            "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+          id: "lasetProdact123",
+          name: "Internet",
+          url: "Business",
+        },
+        author: "info@thehackernews.com (The Hacker News)",
+        title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
+        description:
+          "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
+        url: "/Details",
+        urlToImage:
+          "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+        publishedAt: new Date(),
+        content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
+শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
 
+`,
+        summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
 
-// export const Create = () => {}
-// export const Update = () => { }
-// export const Delete = () => { }
-// export const GetSingle = () => { }
+        metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
+        metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
+        focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
 
-// export const GetAll = (req, res) => {
-//     res.json({
-//         status: "ok",
-//         success: true,
-//         totalResults: 4742,
+        likes: {
+          totalLikes: 53,
+          likes: false,
+        },
+        share: {
+          totalShare: 33,
+          urlToShare: "",
+        },
+        comments: {
+          totalComments: 458983,
+        },
+      },
+      {
+        category: "Sport",
+        media: [
+          {
+            type: "cover",
+            url: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+          },
+        ],
+        id: new Date(),
+        source: {
+          logoToUrl:
+            "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+          id: "lasetProdact123",
+          name: "Internet",
+          url: "Business",
+        },
+        author: "info@thehackernews.com (The Hacker News)",
+        title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
+        description:
+          "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
+        url: "/Details",
+        urlToImage:
+          "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+        publishedAt: new Date(),
+        content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
+শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
 
+`,
+        summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
 
-//         articles: [
-//             {
-//                 category: "Business",
-//                 media: [
-//                     {
-//                         type: "cover",
-//                         url: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100"
-//                     }
-//                 ],
-//                 id: new Date(),
-//                 source: {
-//                     logoToUrl: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100"
-//                     , id: "lasetProdact123",
-//                     name: "Internet",
-//                     url: "Business",
-//                 },
-//                 author: "info@thehackernews.com (The Hacker News)",
-//                 title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
-//                 description:
-//                     "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
-//                 url: "/Details",
-//                 urlToImage:
-//                     "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-//                 publishedAt: new Date(),
-//                 content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
-// শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
+        metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
+        metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
+        focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
 
-// `,
-//                 summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
+        likes: {
+          totalLikes: 53,
+          likes: false,
+        },
+        share: {
+          totalShare: 33,
+          urlToShare: "",
+        },
+        comments: {
+          totalComments: 458983,
+        },
+      },
+      {
+        category: "Sport",
+        media: [
+          {
+            type: "cover",
+            url: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+          },
+        ],
+        id: new Date(),
+        source: {
+          logoToUrl:
+            "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+          id: "lasetProdact123",
+          name: "Internet",
+          url: "Business",
+        },
+        author: "info@thehackernews.com (The Hacker News)",
+        title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
+        description:
+          "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
+        url: "/Details",
+        urlToImage:
+          "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+        publishedAt: new Date(),
+        content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
+শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
 
-//                 metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
-//                 metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
-//                 focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
+`,
+        summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
 
-//                 likes: {
-//                     totalLikes: 53,
-//                     likes: false,
-//                 },
-//                 share: {
-//                     totalShare: 33,
-//                     urlToShare: "",
-//                 },
-//                 comments: {
-//                     totalComments: 458983,
-//                 },
-//             },
+        metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
+        metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
+        focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
 
+        likes: {
+          totalLikes: 53,
+          likes: false,
+        },
+        share: {
+          totalShare: 33,
+          urlToShare: "",
+        },
+        comments: {
+          totalComments: 458983,
+        },
+      },
+      {
+        category: "Sport",
+        media: [
+          {
+            type: "cover",
+            url: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+          },
+        ],
+        id: new Date(),
+        source: {
+          logoToUrl:
+            "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+          id: "lasetProdact123",
+          name: "Internet",
+          url: "Business",
+        },
+        author: "info@thehackernews.com (The Hacker News)",
+        title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
+        description:
+          "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
+        url: "/Details",
+        urlToImage:
+          "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+        publishedAt: new Date(),
+        content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
+শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
 
+`,
+        summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
 
+        metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
+        metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
+        focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
 
-//             {
-//                 id: `${new Date()}ew3`,
-//                 category: "UK",
-//                 source: {
-//                     id: "lasetProdact123",
-//                     name: "Internet",
-//                     category: "Business",
-//                 },
-//                 author: "info@thehackernews.com (The Hacker News)",
-//                 title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
-//                 description:
-//                     "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
-//                 url: "/Details",
-//                 urlToImage:
-//                     "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-//                 publishedAt: new Date(),
-//                 content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
-// শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
+        likes: {
+          totalLikes: 53,
+          likes: false,
+        },
+        share: {
+          totalShare: 33,
+          urlToShare: "",
+        },
+        comments: {
+          totalComments: 458983,
+        },
+      },
 
-// `,
-//                 summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
+      {
+        id: `${new Date()}ew3`,
+        category: "UK",
+        source: {
+          id: "lasetProdact123",
+          name: "Internet",
+          category: "Business",
+        },
+        author: "info@thehackernews.com (The Hacker News)",
+        title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
+        description:
+          "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
+        url: "/Details",
+        urlToImage:
+          "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+        publishedAt: new Date(),
+        content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
+শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
 
-//                 metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
-//                 metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
-//                 focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
+`,
+        summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
 
-//                 likes: {
-//                     totalLikes: 53,
-//                     likes: false,
-//                 },
-//                 share: {
-//                     totalShare: 33,
-//                     urlToShare: "",
-//                 },
-//                 comments: {
-//                     totalComments: 458983,
-//                 },
-//             },
-//             {
-//                 id: `${new Date()}35`,
-//                 category: "Politics",
-//                 source: {
-//                     id: "lasetProdact123",
-//                     name: "Internet",
-//                     category: "Business",
-//                 },
-//                 author: "info@thehackernews.com (The Hacker News)",
-//                 title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
-//                 description:
-//                     "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
-//                 url: "/Details",
-//                 urlToImage:
-//                     "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-//                 publishedAt: new Date(),
-//                 content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
-// শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
+        metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
+        metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
+        focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
 
-// `,
-//                 summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
+        likes: {
+          totalLikes: 53,
+          likes: false,
+        },
+        share: {
+          totalShare: 33,
+          urlToShare: "",
+        },
+        comments: {
+          totalComments: 458983,
+        },
+      },
+      {
+        id: `${new Date()}35`,
+        category: "Politics",
+        source: {
+          id: "lasetProdact123",
+          name: "Internet",
+          category: "Business",
+        },
+        author: "info@thehackernews.com (The Hacker News)",
+        title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
+        description:
+          "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
+        url: "/Details",
+        urlToImage:
+          "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+        publishedAt: new Date(),
+        content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
+শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
 
-//                 metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
-//                 metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
-//                 focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
+`,
+        summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
 
-//                 likes: {
-//                     totalLikes: 53,
-//                     likes: false,
-//                 },
-//                 share: {
-//                     totalShare: 33,
-//                     urlToShare: "",
-//                 },
-//                 comments: {
-//                     totalComments: 458983,
-//                 },
-//             },
-//             {
-//                 id: `${new Date()}34`,
-//                 category: "Sport",
-//                 source: {
-//                     id: "lasetProdact123",
-//                     name: "Internet",
-//                     category: "Business",
-//                 },
-//                 author: "info@thehackernews.com (The Hacker News)",
-//                 title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
-//                 description:
-//                     "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
-//                 url: "/Details",
-//                 urlToImage:
-//                     "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-//                 publishedAt: new Date(),
-//                 content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
-// শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
+        metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
+        metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
+        focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
 
-// `,
-//                 summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
+        likes: {
+          totalLikes: 53,
+          likes: false,
+        },
+        share: {
+          totalShare: 33,
+          urlToShare: "",
+        },
+        comments: {
+          totalComments: 458983,
+        },
+      },
+      {
+        id: `${new Date()}34`,
+        category: "Sport",
+        source: {
+          id: "lasetProdact123",
+          name: "Internet",
+          category: "Business",
+        },
+        author: "info@thehackernews.com (The Hacker News)",
+        title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
+        description:
+          "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
+        url: "/Details",
+        urlToImage:
+          "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+        publishedAt: new Date(),
+        content: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।
+শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে সাঞ্জু স্যামসনকে হারানোর পর তিন নম্বরে ক্রিজে আসেন কিষান। প্রথম ৫ বলে মাত্র ১ রান করা এই ব্যাটসম্যান লকি ফার্গুসনকে চার ও ছক্কা মেরে হাত খোলা শুরু করেন। ফিফটি পূর্ণ করতে ২৮ বল নিলেও পরের ১৪ বলেই পৌঁছে যান তিন অঙ্কের ঘরে। ৪৩ বলে ১০৩ রানের এই ইনিংসে ছিল ১০টি ছক্কা ও ৬টি চার।
 
-//                 metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
-//                 metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
-//                 focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
+`,
+        summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
 
-//                 likes: {
-//                     totalLikes: 53,
-//                     likes: false,
-//                 },
-//                 share: {
-//                     totalShare: 33,
-//                     urlToShare: "",
-//                 },
-//                 comments: {
-//                     totalComments: 458983,
-//                 },
-//             },
-//             {
-//                 id: `${new Date()}3`,
-//                 category: "Science",
-//                 source: {
-//                     name: "Info 24",
-//                     logo: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-//                     url: "http://localhost:5173/",
-//                     type: "newspaper",
-//                 },
+        metaTitle: "হালকা চোট কাটিয়ে একাদশে ফিরেই",
+        metaDescription: "র রীতিমতো তাণ্ডব চালালেন",
+        focusKeyword: "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে ",
 
-//                 author: "info@thehackernews.com (The Hacker News)",
-//                 title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
-//                 description:
-//                     "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
-//                 url: "/Details",
-//                 urlToVideo: `c:\Users\iqbal\OneDrive\Desktop\Ho Gaya Hai Tujhko To Pyar Sajna MP3 Song Download - Dilwale Dulhania Le Jayenge.mp4`,
-//                 urlToImage:
-//                     "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
-//                 publishedAt: new Date(),
-//                 content: `গৃহকর্মী নির্যাতনের অভিযোগে বিমান বাংলাদেশ এয়ারলাইনসের ব্যবস্থাপনা পরিচালককে স্ত্রীসহ গ্রেফতার করেছে পুলিশ। টিআইবি তাদের সবশেষ প্রতিবেদনে জানিয়েছে, ত্রয়োদশ জাতীয় সংসদ নির্বাচনের তফসিল ঘোষণার ৩৬ দিনের মধ্যে দেশে অন্তত ১৫ জন রাজনৈতিক কর্মী নিহত হয়েছেন। বাংলাদেশে আরো বেড়েছে এলপি গ্যাসের দাম। সবশেষ খবর জানতে চোখ রাখুন `,
-//                 summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
+        likes: {
+          totalLikes: 53,
+          likes: false,
+        },
+        share: {
+          totalShare: 33,
+          urlToShare: "",
+        },
+        comments: {
+          totalComments: 458983,
+        },
+      },
+      {
+        id: `${new Date()}3`,
+        category: "Science",
+        source: {
+          name: "Info 24",
+          logo: "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+          url: "http://localhost:5173/",
+          type: "newspaper",
+        },
 
-//                 SEO: {
-//                     metaTitle:
-//                         "হালকা চোট কাটিয়ে একাদশে ফিরেই একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর ",
-//                     metaDescription:
-//                         "র রীতিমতো তাণ্ডব চালালেন একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর ",
-//                     focusKeyword:
-//                         "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর ",
-//                     score: 49,
-//                 },
-//                 likes: {
-//                     totalLikes: 53,
-//                     likes: false,
-//                 },
-//                 share: {
-//                     totalShare: 33,
-//                     urlToShare: "",
-//                 },
-//                 comments: {
-//                     totalComments: 458983,
-//                 },
-//             },
-//         ],
-//     });
-// }
+        author: "info@thehackernews.com (The Hacker News)",
+        title: "টি-টোয়েন্টি সিরিজে ছক্কার নতুন বিশ্ব রেকর্ড",
+        description:
+          "হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার ",
+        url: "/Details",
+        urlToVideo: `c:\Users\iqbal\OneDrive\Desktop\Ho Gaya Hai Tujhko To Pyar Sajna MP3 Song Download - Dilwale Dulhania Le Jayenge.mp4`,
+        urlToImage:
+          "https://asset.news24bd.tv/public/news_images/2026/01/23/thumbnails/1769161485-9ff11ba7859ea2d71ea52fe60df7ee67.jpg?w=828&q=100",
+        publishedAt: new Date(),
+        content: `গৃহকর্মী নির্যাতনের অভিযোগে বিমান বাংলাদেশ এয়ারলাইনসের ব্যবস্থাপনা পরিচালককে স্ত্রীসহ গ্রেফতার করেছে পুলিশ। টিআইবি তাদের সবশেষ প্রতিবেদনে জানিয়েছে, ত্রয়োদশ জাতীয় সংসদ নির্বাচনের তফসিল ঘোষণার ৩৬ দিনের মধ্যে দেশে অন্তত ১৫ জন রাজনৈতিক কর্মী নিহত হয়েছেন। বাংলাদেশে আরো বেড়েছে এলপি গ্যাসের দাম। সবশেষ খবর জানতে চোখ রাখুন `,
+        summary: `হালকা চোট কাটিয়ে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর রীতিমতো তাণ্ডব চালালেন ইশান কিষান। সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে এই বাঁহাতি ওপেনারের বিধ্বংসী সেঞ্চুরি এবং সূর্যকুমার যাদবের ঝোড়ো ব্যাটিংয়ে ছক্কার বিশ্বরেকর্ড গড়েছে ভারত। কিষানের ৪২ বলের এই খুনে সেঞ্চুরি ভারতকে এনে দিয়েছে বড় সংগ্রহ।শনিবার (৩১ জানুয়ারি) থিরুভানান্থাপুরামে টস জিতে ব্যাটিংয়ে নেমে তৃতীয় ওভারে `,
+
+        SEO: {
+          metaTitle:
+            "হালকা চোট কাটিয়ে একাদশে ফিরেই একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর ",
+          metaDescription:
+            "র রীতিমতো তাণ্ডব চালালেন একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর ",
+          focusKeyword:
+            "সিরিজের পঞ্চম ও শেষ টি-টোয়েন্টিতে একাদশে ফিরেই নিউজিল্যান্ডের বোলারদের ওপর ",
+          score: 49,
+        },
+        likes: {
+          totalLikes: 53,
+          likes: false,
+        },
+        share: {
+          totalShare: 33,
+          urlToShare: "",
+        },
+        comments: {
+          totalComments: 458983,
+        },
+      },
+    ],
+  });
+};
 
 
 
