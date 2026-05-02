@@ -132,12 +132,13 @@ export function CustomNavLink({
         </NavLink>
     );
 }
-export function CustomLoading({ text, messgae, children }) {
+export function CustomLoading({ text, messgae, children, className }) {
     return (
-        <div className="text-center py-20">
-            <div className="loading-spinner mx-auto mb-4"></div>
-            <h2 className="text-2xl font-bold mb-2 capitalize">{text}</h2>
-            <p className="text-gray-600">{messgae ?? children}</p>
+        <div className={`text-center ${className}`}>
+            <div className="loading-spinner mx-auto "></div>
+            {text && <h2 className="text-2xl font-bold mb-2 capitalize">{text}</h2>}
+            {messgae || children && <p className="text-gray-600">{messgae ?? children}</p>}
+
         </div>
     );
 }
@@ -419,7 +420,7 @@ export const AccessRole = ({ accessRole = ["user"], role, AccessComponet }) => {
 };
 
 
-export function CustomUndo({ undoFun = () => {}}) {
+export function CustomUndo({ undoFun = () => { } }) {
 
     const [visible, setVisible] = useState(false);
 

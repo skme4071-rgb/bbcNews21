@@ -263,7 +263,141 @@ const EditorStats = () => {
     </div>
   );
 };
+const NewsList = () => {
+  const { setFocusBox } = ContextFocusBox()
+  const { res, refetch } = useFetch(`${API_URL}/Articles`);
+  const { ...articlesDeleteApi } = useFetch(`${API_URL}/Articles`);
 
+  const [articles, setArticles] = useState([]);
+  const [deletedItem, setDeletedItem] = useState(null);
+  const deleteTimer = useRef(null);
+
+  const showUndo = deletedItem !== null;
+
+  // Fetch once
+  useEffect(() => {
+    refetch({ params: { len: 5 } });
+  }, []);
+
+  useEffect(() => {
+    if (res?.articles) setArticles(res.articles);
+  }, [res]);
+
+  // DELETE
+  const deleteItem = (_id) => {
+    const index = articles.findIndex(a => a._id === _id);
+    if (index === -1) return;
+
+    const article = articles[index];
+
+    // Optimistic UI update
+    const updated = [...articles];
+    updated.splice(index, 1);
+    setArticles(updated);
+
+    setDeletedItem({ article, index, _id });
+
+    // API delete after 5s
+    deleteTimer.current = setTimeout(async () => {
+      await articlesDeleteApi.refetch({
+        method: "DELETE",
+        route: _id,
+      });
+      setDeletedItem(null);
+    }, 5000);
+  };
+
+  // UNDO
+  const undoDelete = () => {
+    if (!deletedItem) return;
+
+    clearTimeout(deleteTimer.current);
+
+    const updated = [...articles];
+    updated.splice(deletedItem.index, 0, deletedItem.article);
+    setArticles(updated);
+    setDeletedItem(null);
+  };
+
+
+  const editItem = () => {
+    setFocusBox(<CreateNews messgae="Edit News" />)
+  }
+
+
+  return (
+    <div className="max-w-6xl mx-auto mt-10 bg-white shadow rounded-xl p-4 md:p-6">
+      <h2 className="text-lg md:text-xl font-bold mb-4">News</h2>
+
+      {/* Mobile */}
+      <div className="grid gap-4 md:hidden">
+        {articles.map(a => (
+          <div key={a._id} className="border rounded-lg p-4 shadow-sm">
+            <h3 className="font-semibold mb-2">{a.title}</h3>
+            <p className="text-sm text-gray-600 mb-1">Author: {a.createdBy?.role || "unknown"}</p>
+            <p className="text-sm text-gray-600 mb-3">Category: {a.category}</p>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => editItem(a._id)}
+                className="bg-green-500 text-white px-3 py-1 rounded text-sm">
+                Edit
+              </button>
+              <button
+                className="bg-red-500 text-white px-3 py-1 rounded text-sm"
+                onClick={() => deleteItem(a._id)}
+              >
+                Delete
+              </button>
+            </div>
+
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="min-w-[700px] w-full">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="p-3 text-left">Title</th>
+              <th className="p-3 text-center">Author</th>
+              <th className="p-3 text-center">Category</th>
+              <th className="p-3 text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {articles.map(a => (
+              <tr className="border-t" key={a._id}>
+                <td className="p-3">{a.title}</td>
+                <td className="text-center">{a.createdBy?.role || "unknown"}</td>
+                <td className="text-center">{a.category}</td>
+                <td className="text-center space-x-2">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => editItem(a._id)}
+                      className="bg-green-500 text-white px-3 py-1 rounded text-sm">
+                      Edit
+                    </button>
+                    <button
+                      className="bg-red-500 text-white px-3 py-1 rounded text-sm"
+                      onClick={() => deleteItem(a._id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Undo */}
+      {showUndo && <CustomUndo undoFun={undoDelete} />}
+    </div>
+  );
+};
 const CreateNews = ({ messgae }) => {
   const { closeFocusBox } = ContextFocusBox()
 
@@ -331,13 +465,20 @@ const CreateNews = ({ messgae }) => {
     formData.append("sourceType", "tv");
     formData.append("author", author);
 
-    alert("jjjjjj");
+
     const res = await articleAPI.refetch({
       method: "POST",
       body: formData,
     });
-    closeFocusBox()
-   
+
+    if (res.success) {
+
+
+      closeFocusBox()
+      window.location.reload();
+    }
+
+    return
   };
 
   return (
@@ -599,9 +740,11 @@ const CreateNews = ({ messgae }) => {
       <div className="flex items-center gap-3 py-6">
         <button
           onClick={articleServerCall}
+          disabled={articleAPI.loading}
           className="px-5 py-2.5 w-full bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
         >
-          Publish Article
+          {articleAPI.loading ? <CustomLoading /> : "Publish Article"}
+
         </button>
         <button className="px-5 py-2.5 w-full bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors shadow-sm">
           Save Draft
@@ -749,143 +892,8 @@ const EditorialTeam = () => {
 
 
 
-const NewsList = () => {
-  const { setFocusBox } = ContextFocusBox()
-  const { res, refetch } = useFetch(`${API_URL}/Articles`);
-  const { ...articlesDeleteApi } = useFetch(`${API_URL}/Articles`);
-
-  const [articles, setArticles] = useState([]);
-  const [deletedItem, setDeletedItem] = useState(null);
-  const deleteTimer = useRef(null);
-
-  const showUndo = deletedItem !== null;
-
-  // Fetch once
-  useEffect(() => {
-    refetch({ params: { len: 5 } });
-  }, []);
-
-  useEffect(() => {
-    if (res?.articles) setArticles(res.articles);
-  }, [res]);
-
-  // DELETE
-  const deleteItem = (_id) => {
-    const index = articles.findIndex(a => a._id === _id);
-    if (index === -1) return;
-
-    const article = articles[index];
-
-    // Optimistic UI update
-    const updated = [...articles];
-    updated.splice(index, 1);
-    setArticles(updated);
-
-    setDeletedItem({ article, index, _id });
-
-    // API delete after 5s
-    deleteTimer.current = setTimeout(async () => {
-      await articlesDeleteApi.refetch({
-        method: "DELETE",
-        route: _id,
-      });
-      setDeletedItem(null);
-    }, 5000);
-  };
-
-  // UNDO
-  const undoDelete = () => {
-    if (!deletedItem) return;
-
-    clearTimeout(deleteTimer.current);
-
-    const updated = [...articles];
-    updated.splice(deletedItem.index, 0, deletedItem.article);
-    setArticles(updated);
-    setDeletedItem(null);
-  };
 
 
-  const editItem = () => {
-
-    setFocusBox(<CreateNews messgae="Edit News" />)
-
-  }
-
-
-  return (
-    <div className="max-w-6xl mx-auto mt-10 bg-white shadow rounded-xl p-4 md:p-6">
-      <h2 className="text-lg md:text-xl font-bold mb-4">News</h2>
-
-      {/* Mobile */}
-      <div className="grid gap-4 md:hidden">
-        {articles.map(a => (
-          <div key={a._id} className="border rounded-lg p-4 shadow-sm">
-            <h3 className="font-semibold mb-2">{a.title}</h3>
-            <p className="text-sm text-gray-600 mb-1">Author: {a.createdBy?.role || "unknown"}</p>
-            <p className="text-sm text-gray-600 mb-3">Category: {a.category}</p>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => editItem(a._id)}
-                className="bg-green-500 text-white px-3 py-1 rounded text-sm">
-                Edit
-              </button>
-              <button
-                className="bg-red-500 text-white px-3 py-1 rounded text-sm"
-                onClick={() => deleteItem(a._id)}
-              >
-                Delete
-              </button>
-            </div>
-
-          </div>
-        ))}
-      </div>
-
-      {/* Desktop */}
-      <div className="hidden md:block overflow-x-auto">
-        <table className="min-w-[700px] w-full">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-3 text-left">Title</th>
-              <th className="p-3 text-center">Author</th>
-              <th className="p-3 text-center">Category</th>
-              <th className="p-3 text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {articles.map(a => (
-              <tr className="border-t" key={a._id}>
-                <td className="p-3">{a.title}</td>
-                <td className="text-center">{a.createdBy?.role || "unknown"}</td>
-                <td className="text-center">{a.category}</td>
-                <td className="text-center space-x-2">
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => editItem(a._id)}
-                      className="bg-green-500 text-white px-3 py-1 rounded text-sm">
-                      Edit
-                    </button>
-                    <button
-                      className="bg-red-500 text-white px-3 py-1 rounded text-sm"
-                      onClick={() => deleteItem(a._id)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Undo */}
-      {showUndo && <CustomUndo undoFun={undoDelete} />}
-    </div>
-  );
-};
 
 
 
@@ -919,21 +927,26 @@ export default function Editors() {
 
 
 
-      <EditorStats />
-
-      {/* CreateNewsSection  */}
-      <div className="flex justify-between items-center bg-gray-100  py-2  px-6">
-        <h2 className="text-xl font-bold  ">Create News</h2>
-
-        <button
-          onClick={() => setFocusBox(<CreateNews name="Create News" />)}
-          className="bg-indigo-600 text-sm text-white px-4 py-1 rounded"
-        >
-          Create News
-        </button>
+      <div className="px-6 py-5 mb-5 bg-white  rounded-xl shadow-sm " >
+        <EditorStats />
       </div>
 
-     
+
+      {/* CreateNewsSection  */}
+      <div className="px-6 py-5 bg-white  rounded-xl shadow-sm ">
+        <div className="flex justify-between items-center bg-gray-100  py-2  px-6">
+          <h2 className="text-xl font-bold  ">Create News</h2>
+
+          <button
+            onClick={() => setFocusBox(<CreateNews name="Create News" />)}
+            className="bg-indigo-600 text-sm text-white px-4 py-1 rounded"
+          >
+            Create News
+          </button>
+        </div>
+      </div>
+
+
       <NewsList />
 
       <AccessRole

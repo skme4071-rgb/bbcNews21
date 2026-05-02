@@ -1,9 +1,12 @@
 
-import { createContext, useState, useContext } from "react";
+import { createContext, useState, useContext, useEffect } from "react";
+
+import { useLocation } from "react-router-dom";
 
 const FocusBoxContext = createContext(null);
 
 export default function FocusBoxProvider({ children }) {
+    const { pathname } = useLocation();
     const [state, setState] = useState({
         element: null,
         isChange: false,
@@ -20,6 +23,18 @@ export default function FocusBoxProvider({ children }) {
         document.body.style.overflow = "auto";
         setState({ element: null, isChange: false });
     };
+
+
+
+    useEffect(() => {
+        if (state.isChange) {
+            document.body.style.overflow = "auto";
+            setState({ element: null, isChange: false });
+        }
+    }, [pathname])
+
+
+
 
     return (
 
